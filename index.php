@@ -3,8 +3,10 @@
 $url = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 $url = $url === '' ? '/' : $url;
 $method = $_SERVER['REQUEST_METHOD'];
+parse_str($_SERVER['QUERY_STRING'] ?? '', $queryParams);
 
-function routing($method, $url){
+
+function routing($method, $url,$queryParams){
     if($method == "GET"){
         switch($url){
             case '/':
@@ -20,6 +22,15 @@ function routing($method, $url){
             case '/patients':
                 require './routes/Patient.php';
             break;
+            case '/patient':
+                if (isset($queryParams['id'])) {
+                    $_GET['id'] = $queryParams['id']; 
+                    require './routes/Patient.php';   
+                } else {
+                    http_response_code(400);
+                    echo json_encode(["message" => "Missing 'id' parameter."]);
+                }
+            break;
             default:
                 http_response_code(404);
                 echo "404 - Page not found";
@@ -33,8 +44,10 @@ function routing($method, $url){
             case '/patients':
                 require './routes/Patient.php';
             break;
+            default:
                 http_response_code(404);
                 echo "404 - Not found (POST)";
+            break;
         }
     }
     else if($method == "PUT"){
@@ -53,4 +66,4 @@ function routing($method, $url){
     }
 }
 
-routing($method, $url);
+routing($method, $url,$queryParams);

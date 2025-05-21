@@ -5,7 +5,9 @@ class Patient {
     private $table = "Patients";
 
     public $id_patient;
+    
     public $full_name;
+    public $NIN;
     public $age;
     public $sex;
     public $adress;
@@ -19,11 +21,12 @@ class Patient {
     public function create() {
         $sql = "INSERT INTO " . $this->table . " 
                 (full_name, age, sex, adress, telephone, groupage) 
-                VALUES (:full_name, :age, :sex, :adress, :telephone, :groupage)";
+                VALUES (:full_name,:NIN, :age, :sex, :adress, :telephone, :groupage)";
 
         $stmt = $this->conn->prepare($sql);
 
         $stmt->bindParam(':full_name', $this->full_name);
+        $stmt->bindParam(':NIN',$this->NIN);
         $stmt->bindParam(':age', $this->age);
         $stmt->bindParam(':sex', $this->sex);
         $stmt->bindParam(':adress', $this->adress);
@@ -35,7 +38,7 @@ class Patient {
 
     // Get all patients
     public function readAll() {
-        $sql = "SELECT Patients.full_name,Patients.sex,Services.nom_service FROM ". $this->table . " JOIN Sejour on Sejour.id_patient=Patients.id_patient
+        $sql = "SELECT Patients.id_patient,Patients.full_name,Patients.sex,Services.nom_service FROM ". $this->table . " JOIN Sejour on Sejour.id_patient=Patients.id_patient
                                                   JOIN Chambres on Chambres.id_chambre = Sejour.id_chambre
                                                   JOIN Services on Services.id_service = Chambres.id_service;";
         $stmt = $this->conn->prepare($sql);
@@ -45,24 +48,20 @@ class Patient {
 
     // Get single patient by ID
     public function readOne() {
-        $sql = "SELECT * FROM " . $this->table . " WHERE id_patient = :id LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $this->id_patient);
-        $stmt->execute();
+        $sql = "SELECT * FROM " . $this->table . "  JOIN Sejour on Sejour.id_patient=Patients.id_patient
+                                                  JOIN Chambres on Chambres.id_chambre = Sejour.id_chambre
+                                                  JOIN Services on Services.id_service = Chambres.id_service WHERE Patients.id_patient = :id OR Patients.full_name LIKE :full_name LIMIT 1;";
+                                                  $stmt = $this->conn->prepare($sql);
 
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                                                  // Bind parameters
+                                                  $stmt->bindParam(':id', $this->id_patient);
+                                                  $fullNameParam = '%' . $this->full_name . '%';
+                                                  $stmt->bindParam(':full_name', $fullNameParam);
+                                                  
+                                                  $stmt->execute();
+                                                  $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($row) {
-            $this->full_name = $row['full_name'];
-            $this->age = $row['age'];
-            $this->sex = $row['sex'];
-            $this->adress = $row['adress'];
-            $this->telephone = $row['telephone'];
-            $this->groupage = $row['groupage'];
-            return true;
-        }
-
-        return false;
+        return $row;
     }
 
     // Update patient

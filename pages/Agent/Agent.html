@@ -483,10 +483,8 @@
                     <div id="patientDetails">
                         <div class="update-info">
                             <strong>آخر تحديث:</strong> <span id="detailUpdatedAt"></span><br>
-                            <strong>بواسطة:</strong> <span id="detailAdminName"></span>
                         </div>
                         <p><strong>الاسم:</strong> <span id="detailName"></span></p>
-                        <p><strong>اللقب:</strong> <span id="detailSurname"></span></p>
                         <p><strong>رقم التعريف:</strong> <span id="detailIdNumber"></span></p>
                         <p><strong>رقم الهاتف:</strong> <span id="detailPhoneNumber"></span></p>
                         <p><strong>الجنس:</strong> <span id="detailGender"></span></p>
@@ -535,7 +533,7 @@
             try {
                 const response = await axios.get("/patients");
                 patients=response.data.patients;
-                console.log(response.data.patients);
+
 
                 patients.forEach(patient => {
                     const row = managePatientsTable.insertRow();
@@ -544,7 +542,7 @@
         <td>${patient.sex || '-'}</td>
         <td>${patient.nom_service || '-'}</td>
         <td>
-            <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient}, ${patient.id_sejour})" 
+            <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
                data-bs-toggle="modal" data-bs-target="#detailsPatientModal"></i>
         </td>
         <td>
@@ -660,25 +658,24 @@
             }
         }
 
-        async function showPatientDetails(id, sejour_id) {
+        async function showPatientDetails(id) {
             try {
-                const response = await fetch('api/routes/patients.php');
-                const patients = await response.json();
-                const patient = patients.find(p => p.id_patient === id);
-                if (patient) {
-                    document.getElementById('detailName').textContent = patient.Nom || '-';
-                    document.getElementById('detailSurname').textContent = patient.Prénom || '-';
-                    document.getElementById('detailIdNumber').textContent = patient.NIN || '-';
-                    document.getElementById('detailPhoneNumber').textContent = patient.Tel || '-';
-                    document.getElementById('detailGender').textContent = patient.Gender || '-';
-                    document.getElementById('detailBirthDate').textContent = patient.Birth_date || '-';
-                    document.getElementById('detailBloodType').textContent = patient.Blood_type || '-';
-                    document.getElementById('detailDepartment').textContent = patient.department || '-';
-                    document.getElementById('detailAdmissionDate').textContent = patient.Date_entree || '-';
-                    document.getElementById('detailUpdatedAt').textContent = patient.Updated_at ? new Date(patient.Updated_at).toLocaleString('ar-SA') : '-';
-                    document.getElementById('detailAdminName').textContent = patient.admin_name + ' ' + patient.admin_prenom || '-';
-                    document.getElementById('detailsPatientModalLabel').textContent = `تفاصيل المريض: ${patient.Nom} ${patient.Prénom}`;
-                }
+                const response = await axios.get(`/patient?id=${id}`);
+                const patient = response.data;
+                console.log(response);
+
+if (patient) {
+    document.getElementById('detailName').textContent = patient.full_name || '-';
+    document.getElementById('detailIdNumber').textContent = patient.NIN || '-';
+    document.getElementById('detailPhoneNumber').textContent = patient.telephone || '-';
+    document.getElementById('detailGender').textContent = patient.sex || '-';
+    document.getElementById('detailBirthDate').textContent = patient.age || '-';
+    document.getElementById('detailBloodType').textContent = patient.groupage || '-';
+    document.getElementById('detailDepartment').textContent = patient.nom_service || '-';
+    document.getElementById('detailAdmissionDate').textContent = patient.Date_entree || '-';
+    document.getElementById('detailUpdatedAt').textContent = patient.Updated_at ? new Date(patient.Updated_at).toLocaleString('ar-SA') : '-';
+    document.getElementById('detailsPatientModalLabel').textContent = `تفاصيل المريض: ${patient.full_name}`;
+}
             } catch (error) {
                 showMessage('حدث خطأ أثناء تحميل تفاصيل المريض', 'error');
             }
