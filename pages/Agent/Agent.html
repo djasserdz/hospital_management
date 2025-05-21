@@ -543,7 +543,7 @@
         <td>${patient.nom_service || '-'}</td>
         <td>
             <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
-               data-bs-toggle="modal" data-bs-target="#detailsPatientModal"></i>
+               data-bs-toggle="modal" data-bs-target="#detailsPatientModal">${patient.id_patient}</i>
         </td>
         <td>
             <button class="btn btn-primary btn-sm" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour})" 
@@ -677,6 +677,7 @@ if (patient) {
     document.getElementById('detailsPatientModalLabel').textContent = `تفاصيل المريض: ${patient.full_name}`;
 }
             } catch (error) {
+                console.log(error);
                 showMessage('حدث خطأ أثناء تحميل تفاصيل المريض', 'error');
             }
         }

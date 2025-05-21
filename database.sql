@@ -67,7 +67,7 @@ CREATE TABLE Prescription (
 DROP TABLE IF EXISTS Suivi;
 CREATE TABLE Suivi(
     id_suivi int not null AUTO_INCREMENT PRIMARY KEY,
-    id_patient int not null,
+    id_sejour int not null,
     id_nurse int not null,
     etat_santee VARCHAR(30) not null,
     tension VARCHAR(20) not null,
@@ -77,7 +77,7 @@ CREATE TABLE Suivi(
     glycemie decimal(3,1) not null,     -- Changed from decimal(2,1) to decimal(3,1)
     Remarque TEXT not null,
     Date_observation timestamp default CURRENT_TIMESTAMP,
-    CONSTRAINT fk_patient_i_d FOREIGN key (id_patient) REFERENCES Patients(id_patient),
+    CONSTRAINT fk_sejour_i_d FOREIGN key (id_sejour) REFERENCES Sejour(id_sejour),
     CONSTRAINT fk_nurse_i_d FOREIGN key (id_nurse) REFERENCES Users(id)
 );
 
@@ -115,7 +115,7 @@ INSERT INTO Prescription (id_sejour, Medicament, Dosage, frequence, instructions
 (3, 'Metoprolol', 50, 2, 'Twice a day, monitor blood pressure.');
 
 INSERT INTO Suivi (
-    id_patient, id_nurse, etat_santee, tension, temperature, frequence_quardiaque,
+    id_sejour, id_nurse, etat_santee, tension, temperature, frequence_quardiaque,
     saturation_oxygene, glycemie, Remarque
 ) VALUES
 -- Entry for John Doe

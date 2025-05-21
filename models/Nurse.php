@@ -6,7 +6,7 @@ class Nurse{
  public $full_name;
  public $email;
  public $password;
- public final $role="nurse";
+ public $role="nurse";
 
  public function __construct($db) {
     $this->conn = $db;

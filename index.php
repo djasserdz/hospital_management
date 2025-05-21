@@ -44,12 +44,8 @@ function routing($method, $url,$queryParams){
             case '/patients':
                 require './routes/Patient.php';
             break;
-<<<<<<< HEAD
-               default: http_response_code(404);
-=======
-            default:
+                default:
                 http_response_code(404);
->>>>>>> fc4b93a83604e1d630df83e9ff7029103d7f243a
                 echo "404 - Not found (POST)";
             break;
         }

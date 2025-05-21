@@ -24,14 +24,14 @@ if ($method === "GET") {
         echo json_encode(["patients" => $data]);
         exit;
     } else if (strpos($parsed_url, '/patient') !== false) {
-        $patient = new Patient($db);
+        if (!isset($_GET['id'])) {
+            http_response_code(400);
+            echo json_encode(["message" => "Missing patient id"]);
+            exit;
+        }
     
-        if (isset($_GET['id'])) {
-            $patient->id_patient = $_GET['id'];
-        }
-        if (isset($_GET['full_name'])) {
-            $patient->full_name = $_GET['full_name'];
-        }
+        $patient = new Patient($db);
+        $patient->id_patient = $_GET['id'];
     
         $data = $patient->readOne();
     
@@ -42,7 +42,8 @@ if ($method === "GET") {
             echo json_encode(["message" => "Patient not found"]);
         }
         exit;
-    } else {
+    }
+     else {
         http_response_code(404);
         echo json_encode(["message" => "Endpoint does not exist"]);
         exit;
