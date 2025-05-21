@@ -38,6 +38,7 @@ public function searchPatient($fullname) {
     }
 }
 
+
 }
 
 ?>
