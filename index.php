@@ -33,7 +33,7 @@ function routing($method, $url){
             case '/patients':
                 require './routes/Patient.php';
             break;
-                http_response_code(404);
+               default: http_response_code(404);
                 echo "404 - Not found (POST)";
         }
     }

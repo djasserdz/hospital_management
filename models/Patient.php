@@ -44,26 +44,31 @@ class Patient {
     }
 
     // Get single patient by ID
-    public function readOne() {
-        $sql = "SELECT * FROM " . $this->table . " WHERE id_patient = :id LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $this->id_patient);
-        $stmt->execute();
+    // Get a patient by partial/full name match
+public function readOne($full_name) {
+    $sql = "SELECT * FROM " . $this->table . " WHERE full_name LIKE :full_name LIMIT 1";
+    $stmt = $this->conn->prepare($sql);
 
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Add wildcards for partial match
+    $search_name = "%" . $full_name . "%";
+    $stmt->bindParam(':full_name', $search_name);
 
-        if ($row) {
-            $this->full_name = $row['full_name'];
-            $this->age = $row['age'];
-            $this->sex = $row['sex'];
-            $this->adress = $row['adress'];
-            $this->telephone = $row['telephone'];
-            $this->groupage = $row['groupage'];
-            return true;
-        }
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return false;
+    if ($row) {
+        $this->id_patient = $row['id_patient'];
+        $this->full_name = $row['full_name'];
+        $this->age = $row['age'];
+        $this->sex = $row['sex'];
+        $this->adress = $row['adress'];
+        $this->telephone = $row['telephone'];
+        $this->groupage = $row['groupage'];
+        return true;
     }
+
+    return false;
+}
 
     // Update patient
     public function update() {
