@@ -34,6 +34,7 @@ DROP TABLE IF EXISTS Patients;
 CREATE TABLE Patients (
     id_patient INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(30) NOT NULL,
+    NIN VARCHAR(15) not null,
     age INT NOT NULL,
     sex ENUM('homme','famme') not null,
     adress VARCHAR(100) NOT NULL,
@@ -98,10 +99,10 @@ INSERT INTO Users (id_service, full_name, email, password, role) VALUES
 (2, 'Bob Nurse', 'bob.n@hospital.com', '$2y$10$.rwWIJpSLbphSLGWBtiBU.qbdax2TwzHAUuF03DeqicX7mEJXcdTC', 'nurse'),
 (3, 'Claire Nurse', 'claire.n@hospital.com', 'hashed_password_3', 'nurse');
 
-INSERT INTO Patients (full_name, age,sex, adress, telephone,groupage) VALUES
-('John Doe', 45,'homme', '123 Main St, Cityville', '0612345678','AB+'),
-('Jane Smith', 30,'homme', '456 Elm St, Townsville', '0623456789','A+'),
-('Tom Hanks', 60,'homme', '789 Oak St, Villagetown', '0634567890','B+');
+INSERT INTO Patients (full_name,NIN, age,sex, adress, telephone,groupage) VALUES
+('John Doe','054845678', 45,'homme', '123 Main St, Cityville', '0612345678','AB+'),
+('Jane Smith','069874268', 30,'homme', '456 Elm St, Townsville', '0623456789','A+'),
+('Tom Hanks','023659874', 60,'homme', '789 Oak St, Villagetown', '0634567890','B+');
 
 INSERT INTO Sejour (id_patient, id_chambre, Date_entree, Date_sortiee) VALUES
 (1, 1, '2025-05-01 08:00:00', NULL),
