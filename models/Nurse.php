@@ -18,9 +18,26 @@ public function getAllPatients()
     $patients=new Patient($db);
     $patients->readAll();
 }
-public function searchPatient($request){
-
+public function searchPatient($fullname) {
+    include_once 'Patient.php';
+     $db =new Database();
+    $patient = new Patient($db); 
+    if ($patient->readOne($fullname)) {
+        
+        return [
+            'id_patient' => $patient->id_patient,
+            'full_name' => $patient->full_name,
+            'age' => $patient->age,
+            'sex' => $patient->sex,
+            'adress' => $patient->adress,
+            'telephone' => $patient->telephone,
+            'groupage' => $patient->groupage
+        ];
+    } else {
+        return false;
+    }
 }
+
 }
 
 ?>
