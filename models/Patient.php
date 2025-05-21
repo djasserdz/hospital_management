@@ -46,23 +46,29 @@ class Patient {
          return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Get single patient by ID
     public function readOne() {
-        $sql = "SELECT * FROM " . $this->table . "  JOIN Sejour on Sejour.id_patient=Patients.id_patient
-                                                  JOIN Chambres on Chambres.id_chambre = Sejour.id_chambre
-                                                  JOIN Services on Services.id_service = Chambres.id_service WHERE Patients.id_patient = :id OR Patients.full_name LIKE :full_name LIMIT 1;";
-                                                  $stmt = $this->conn->prepare($sql);
-
-                                                  // Bind parameters
-                                                  $stmt->bindParam(':id', $this->id_patient);
-                                                  $fullNameParam = '%' . $this->full_name . '%';
-                                                  $stmt->bindParam(':full_name', $fullNameParam);
-                                                  
-                                                  $stmt->execute();
-                                                  $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
+        $sql = "SELECT * FROM " . $this->table . " 
+                JOIN Sejour ON Sejour.id_patient = Patients.id_patient
+                JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
+                JOIN Services ON Services.id_service = Chambres.id_service
+                WHERE (:id IS NOT NULL AND Patients.id_patient = :id)
+                   OR (:full_name IS NOT NULL AND Patients.full_name LIKE :full_name)
+                LIMIT 1";
+    
+        $stmt = $this->conn->prepare($sql);
+    
+        $id = !empty($this->id_patient) ? $this->id_patient : null;
+        $stmt->bindParam(':id', $id);
+    
+        $full_name = !empty($this->full_name) ? '%' . $this->full_name . '%' : null;
+        $stmt->bindParam(':full_name', $full_name);
+    
+        $stmt->execute();
+    
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row;
     }
+    
 
     // Update patient
     public function update() {

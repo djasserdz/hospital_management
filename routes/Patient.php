@@ -24,15 +24,17 @@ if ($method === "GET") {
         echo json_encode(["patients" => $data]);
         exit;
     } else if (strpos($parsed_url, '/patient') !== false) {
-        if (!isset($_GET['id'])) {
-            http_response_code(400);
-            echo json_encode(["message" => "Missing patient id"]);
-            exit;
-        }
         $patient = new Patient($db);
-        $patient->id_patient = $_GET['id'];
-        $data = $patient->readOne(); // should return associative array with patient details
-
+    
+        if (isset($_GET['id'])) {
+            $patient->id_patient = $_GET['id'];
+        }
+        if (isset($_GET['full_name'])) {
+            $patient->full_name = $_GET['full_name'];
+        }
+    
+        $data = $patient->readOne();
+    
         if ($data) {
             echo json_encode($data);
         } else {
