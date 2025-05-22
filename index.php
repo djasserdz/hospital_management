@@ -22,6 +22,9 @@ function routing($method, $url,$queryParams){
             case '/patients':
                 require './routes/Patient.php';
             break;
+            case "/room":
+                require "./routes/Chambre.php";
+            exit;
             case '/patient':
                 if (isset($queryParams['id'])) {
                     $_GET['id'] = $queryParams['id']; 
@@ -41,7 +44,7 @@ function routing($method, $url,$queryParams){
             case '/login':
                 require './routes/User.php';
             break;
-            case '/patients':
+            case '/patient':
                 require './routes/Patient.php';
             break;
                 default:
@@ -52,6 +55,9 @@ function routing($method, $url,$queryParams){
     }
     else if($method == "PUT"){
         switch($url){
+            case '/patient';
+            require './routes/Patient.php';
+            break;
             default:
                 http_response_code(404);
                 echo "404 - Not found (PUT)";

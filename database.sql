@@ -16,6 +16,7 @@ CREATE TABLE Chambres (
     id_service INT NOT NULL,
     Numero_cr INT NOT NULL,
     Numero_lit INT NULL,
+    Available boolean default true,
     CONSTRAINT fk_id_service FOREIGN KEY (id_service) REFERENCES Services(id_service)
 );
 
@@ -46,7 +47,7 @@ DROP TABLE IF EXISTS Sejour;
 CREATE TABLE Sejour (
     id_sejour INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     id_patient INT NOT NULL,
-    id_chambre INT NOT NULL,
+    id_chambre INT NUll,
     Date_entree TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Date_sortiee TIMESTAMP NULL,
     CONSTRAINT fk_patient_id FOREIGN KEY (id_patient) REFERENCES Patients(id_patient),
@@ -90,6 +91,7 @@ INSERT INTO Services (nom_service) VALUES
 INSERT INTO Chambres (id_service, Numero_cr, Numero_lit) VALUES
 (1, 101, 1),
 (1, 101, 2),
+(1, 101, 3),
 (2, 201, 1),
 (3, 301, 1),
 (4, 401, 1);

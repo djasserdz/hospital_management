@@ -275,14 +275,8 @@
                     <form id="addPatientForm" class="row g-3">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="addName">الاسم</label>
+                                <label for="addName">الاسم و اللقب</label>
                                 <input type="text" class="form-control" id="addName" name="name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="addSurname">اللقب</label>
-                                <input type="text" class="form-control" id="addSurname" name="surname" required>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -303,8 +297,8 @@
                                 <label for="addGender">الجنس</label>
                                 <select class="form-select" id="addGender" name="gender" required>
                                     <option value="">اختر الجنس</option>
-                                    <option value="ذكر">ذكر</option>
-                                    <option value="أنثى">أنثى</option>
+                                    <option value="homme">ذكر</option>
+                                    <option value="famme">أنثى</option>
                                 </select>
                             </div>
                         </div>
@@ -341,12 +335,10 @@
                                 <label for="addDepartment">القسم</label>
                                 <select class="form-select" id="addDepartment" name="department" required>
                                     <option value="">اختر القسم</option>
-                                    <option value="التوليد والنساء">التوليد والنساء</option>
-                                    <option value="خدمات الجراحة">خدمات الجراحة</option>
-                                    <option value="خدمات الأطفال">خدمات الأطفال</option>
-                                    <option value="خدمات الأشعة">خدمات الأشعة</option>
-                                    <option value="المختبرات الطبية">المختبرات الطبية</option>
-                                    <option value="العناية المركزة">العناية المركزة</option>
+                                    <option value="2">Neurology</option>
+                                    <option value="1">Cardiology</option>
+                                    <option value="3">Padiatrics</option>
+                                    <option value="4">Orthopedics</option>
                                 </select>
                             </div>
                         </div>
@@ -355,6 +347,14 @@
                                 <label for="addAdmissionDate">تاريخ الدخول</label>
                                 <input type="date" class="form-control" id="addAdmissionDate" name="admission_date"
                                     required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="addAvailableRooms">الغرفة المتاحة</label>
+                                <select class="form-select" id="addAvailableRooms" name="room_id" required>
+                                    <option value="">اختر الغرفة</option>
+                                </select>
                             </div>
                         </div>
                     </form>
@@ -380,14 +380,8 @@
                     <form id="updatePatientForm" class="row g-3">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="updateName">الاسم</label>
+                                <label for="updateName">الاسم و اللقب</label>
                                 <input type="text" class="form-control" id="updateName" name="name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateSurname">اللقب</label>
-                                <input type="text" class="form-control" id="updateSurname" name="surname" required>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -408,8 +402,8 @@
                                 <label for="updateGender">الجنس</label>
                                 <select class="form-select" id="updateGender" name="gender" required>
                                     <option value="">اختر الجنس</option>
-                                    <option value="ذكر">ذكر</option>
-                                    <option value="أنثى">أنثى</option>
+                                    <option value="homme">ذكر</option>
+                                    <option value="famme">أنثى</option>
                                 </select>
                             </div>
                         </div>
@@ -444,12 +438,10 @@
                                 <label for="updateDepartment">القسم</label>
                                 <select class="form-select" id="updateDepartment" name="department" required>
                                     <option value="">اختر القسم</option>
-                                    <option value="التوليد والنساء">التوليد والنساء</option>
-                                    <option value="خدمات الجراحة">خدمات الجراحة</option>
-                                    <option value="خدمات الأطفال">خدمات الأطفال</option>
-                                    <option value="خدمات الأشعة">خدمات الأشعة</option>
-                                    <option value="المختبرات الطبية">المختبرات الطبية</option>
-                                    <option value="العناية المركزة">العناية المركزة</option>
+                                    <option value="2">Neurology</option>
+                                    <option value="1">Cardiology</option>
+                                    <option value="3">Padiatrics</option>
+                                    <option value="4">Orthopedics</option>
                                 </select>
                             </div>
                         </div>
@@ -458,6 +450,14 @@
                                 <label for="updateAdmissionDate">تاريخ الدخول</label>
                                 <input type="date" class="form-control" id="updateAdmissionDate" name="admission_date"
                                     required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="updateAvailableRooms">الغرفة المتاحة</label>
+                                <select class="form-select" id="updateAvailableRooms" name="room_id" required>
+                                    <option value="">اختر الغرفة</option>
+                                </select>
                             </div>
                         </div>
                     </form>
@@ -529,132 +529,244 @@
             }, 5000);
         }
 
+        async function loadRoomsForDepartment(departmentId, roomSelectId) {
+            const roomSelect = document.getElementById(roomSelectId);
+            roomSelect.innerHTML = '<option value="">اختر الغرفة</option>';
+
+            if (!departmentId) return;
+
+            try {
+                const result = await axios.get(`/room`, {
+                    params: { id_service: departmentId }
+                });
+
+                const data = result.data;
+
+                if (data.length > 0) {
+                    data.forEach(room => {
+                        const option = document.createElement("option");
+                        option.value = room.id_chambre;
+                        option.text = `ق. ${room.numero_cr} - سرير ${room.numero_lit ?? '-'}`;
+                        roomSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement("option");
+                    option.text = "لا توجد غرف متاحة";
+                    option.disabled = true;
+                    roomSelect.appendChild(option);
+                }
+            } catch (error) {
+                console.error("Error fetching rooms:", error);
+            }
+        }
+
         async function loadManagePatients() {
             try {
                 const response = await axios.get("/patients");
-                patients=response.data.patients;
+                const patients = response.data.patients;
 
-
+                managePatientsTable.innerHTML = '';
+                
                 patients.forEach(patient => {
                     const row = managePatientsTable.insertRow();
                     row.innerHTML = `
-        <td>${patient.full_name || '-'}</td>
-        <td>${patient.sex || '-'}</td>
-        <td>${patient.nom_service || '-'}</td>
-        <td>
-            <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
-               data-bs-toggle="modal" data-bs-target="#detailsPatientModal">${patient.id_patient}</i>
-        </td>
-        <td>
-            <button class="btn btn-primary btn-sm" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour})" 
-                    data-bs-toggle="modal" data-bs-target="#updatePatientModal">تحديث</button>
-        </td>
-    `;
+                        <td>${patient.full_name || '-'}</td>
+                        <td>${patient.sex === 'homme' ? 'ذكر' : 'أنثى'}</td>
+                        <td>${patient.nom_service || '-'}</td>
+                        <td>
+                            <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
+                               data-bs-toggle="modal" data-bs-target="#detailsPatientModal"></i>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour})" 
+                                    data-bs-toggle="modal" data-bs-target="#updatePatientModal">تحديث</button>
+                        </td>
+                    `;
                 });
             } catch (error) {
-                console.log(error);
+                console.error(error);
                 showMessage('حدث خطأ أثناء تحميل المرضى', 'error');
             }
         }
 
         async function addPatient() {
             try {
-                const patientData = {
-                    id_number: document.getElementById('addIdNumber').value,
-                    name: document.getElementById('addName').value,
-                    surname: document.getElementById('addSurname').value,
-                    gender: document.getElementById('addGender').value,
-                    birth_date: document.getElementById('addBirthDate').value,
-                    blood_type: document.getElementById('addBloodType').value,
-                    phone_number: document.getElementById('addPhoneNumber').value,
-                    admission_date: document.getElementById('addAdmissionDate').value,
-                    department: document.getElementById('addDepartment').value,
-                    id_agent: JSON.parse(localStorage.getItem('loggedInUser')).id,
-                    adress: document.getElementById('addIdadresse').value
+                const fullName = document.getElementById('addName').value.trim();
+                const NIN = document.getElementById('addIdNumber').value.trim();
+                const phoneNumber = document.getElementById('addPhoneNumber').value.trim();
+                const gender = document.getElementById('addGender').value;
+                const birthDate = document.getElementById('addBirthDate').value;
+                const bloodType = document.getElementById('addBloodType').value;
+                const address = document.getElementById('addIdadresse').value.trim();
+                const department = document.getElementById('addDepartment').value;
+                const admissionDate = document.getElementById('addAdmissionDate').value;
+                const roomId = document.getElementById('addAvailableRooms').value;
+
+                if (!fullName || !NIN || !phoneNumber || !gender || !birthDate || !bloodType || !address || !department || !admissionDate || !roomId) {
+                    showMessage('يرجى ملء جميع الحقول المطلوبة', 'error');
+                    return;
+                }
+
+                const calculateAge = (birthDate) => {
+                    const today = new Date();
+                    const birth = new Date(birthDate);
+                    let age = today.getFullYear() - birth.getFullYear();
+                    const monthDiff = today.getMonth() - birth.getMonth();
+                    
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                        age--;
+                    }
+                    return age;
                 };
 
-                const response = await axios.post('api/routes/patients.php', patientData, {
+                const patientData = {
+                    full_name: fullName,
+                    NIN: NIN,
+                    age: calculateAge(birthDate),
+                    sex: gender,
+                    adress: address,
+                    telephone: phoneNumber,
+                    groupage: bloodType,
+                    admission_date: admissionDate,
+                    id_chambre: roomId,
+                    id_service: department
+                };
+
+                const response = await axios.post("/patient", patientData, {
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
 
-                console.log(response.data);
-
-
-                const result = await response.data;
-                if (response.ok) {
-                    loadManagePatients();
+                if (response.status === 200 || response.status === 201) {
+                    managePatientsTable.innerHTML = '';
+                    await loadManagePatients();
+                    
                     const modal = bootstrap.Modal.getInstance(addPatientModal);
                     modal.hide();
+                    
                     document.getElementById('addPatientForm').reset();
-                    showMessage(result.message, 'success');
+                    showMessage(response.data.message || 'تم إضافة المريض بنجاح', 'success');
                 } else {
-                    showMessage(result.message, 'error');
+                    showMessage(response.data.message || 'حدث خطأ أثناء إضافة المريض', 'error');
                 }
             } catch (error) {
-                showMessage('حدث خطأ أثناء الإضافة: ' + error.message, 'error');
+                console.error('Error adding patient:', error);
+                
+                let errorMessage = 'حدث خطأ أثناء إضافة المريض';
+                
+                if (error.response) {
+                    errorMessage = error.response.data.message || `خطأ في الخادم: ${error.response.status}`;
+                } else if (error.request) {
+                    errorMessage = 'لا يمكن الوصول إلى الخادم';
+                } else {
+                    errorMessage = error.message || errorMessage;
+                }
+                
+                showMessage(errorMessage, 'error');
             }
         }
 
         async function updatePatient(id, sejour_id) {
             selectedPatientId = id;
             selectedSejourId = sejour_id;
+
             try {
-                const response = await fetch('api/routes/patients.php');
-                const patients = await response.json();
-                const patient = patients.find(p => p.id_patient === id);
+                const response = await axios.get(`/patient?id=${id}`);
+                const patient = response.data;
+
                 if (patient) {
-                    document.getElementById('updateName').value = patient.Nom || '';
-                    document.getElementById('updateSurname').value = patient.Prénom || '';
+                    document.getElementById('updateName').value = patient.full_name || '';
                     document.getElementById('updateIdNumber').value = patient.NIN || '';
-                    document.getElementById('updatePhoneNumber').value = patient.Tel || '';
-                    document.getElementById('updateGender').value = patient.Gender || '';
-                    document.getElementById('updateBirthDate').value = patient.Birth_date || '';
-                    document.getElementById('updateBloodType').value = patient.Blood_type || '';
-                    document.getElementById('updateDepartment').value = patient.department || '';
-                    document.getElementById('updateAdmissionDate').value = patient.Date_entrée || '';
-                    document.getElementById('updatePatientModalLabel').textContent = `تحديث بيانات المريض: ${patient.Nom} ${patient.Prénom}`;
+                    document.getElementById('updatePhoneNumber').value = patient.telephone || '';
+                    document.getElementById('updateGender').value = patient.sex || '';
+                    document.getElementById('updateBirthDate').value = patient.birth_date || '';
+                    document.getElementById('updateBloodType').value = patient.groupage || '';
+                    document.getElementById('updateadresse').value = patient.adress || '';
+                    document.getElementById('updateAdmissionDate').value = patient.Date_entree || '';
+                    
+                    document.getElementById('updateDepartment').value = patient.id_service || '';
+                    await loadRoomsForDepartment(patient.id_service, "updateAvailableRooms");
+                    
+                    setTimeout(() => {
+                        document.getElementById('updateAvailableRooms').value = patient.id_chambre || '';
+                    }, 300);
+
+                    document.getElementById('updatePatientModalLabel').textContent =
+                        `تحديث بيانات المريض: ${patient.full_name}`;
                 }
             } catch (error) {
+                console.error(error);
                 showMessage('حدث خطأ أثناء تحميل بيانات المريض', 'error');
             }
         }
 
         async function saveUpdatedPatient() {
             try {
-                const patientData = {
-                    id: selectedPatientId,
-                    sejour_id: selectedSejourId,
-                    id_number: document.getElementById('updateIdNumber').value.trim(),
-                    name: document.getElementById('updateName').value.trim(),
-                    surname: document.getElementById('updateSurname').value.trim(),
-                    gender: document.getElementById('updateGender').value,
-                    birth_date: document.getElementById('updateBirthDate').value,
-                    blood_type: document.getElementById('updateBloodType').value,
-                    phone_number: document.getElementById('updatePhoneNumber').value.trim(),
-                    admission_date: document.getElementById('updateAdmissionDate').value,
-                    department: document.getElementById('updateDepartment').value,
-                    id_agent: JSON.parse(localStorage.getItem('loggedInUser')).id
+                const fullName = document.getElementById('updateName').value.trim();
+                const NIN = document.getElementById('updateIdNumber').value.trim();
+                const phoneNumber = document.getElementById('updatePhoneNumber').value.trim();
+                const gender = document.getElementById('updateGender').value;
+                const birthDate = document.getElementById('updateBirthDate').value;
+                const bloodType = document.getElementById('updateBloodType').value;
+                const address = document.getElementById('updateadresse').value.trim();
+                const department = document.getElementById('updateDepartment').value;
+                const admissionDate = document.getElementById('updateAdmissionDate').value;
+                const roomId = document.getElementById('updateAvailableRooms').value;
+
+                const calculateAge = (birthDate) => {
+                    const today = new Date();
+                    const birth = new Date(birthDate);
+                    let age = today.getFullYear() - birth.getFullYear();
+                    const monthDiff = today.getMonth() - birth.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                        age--;
+                    }
+                    return age;
                 };
 
-                const response = await fetch('api/routes/patients.php', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(patientData)
+
+
+                const patientData = {
+                    id_patient: selectedPatientId,
+                    full_name: fullName,
+                    NIN: NIN,
+                    age: calculateAge(birthDate),
+                    sex: gender,
+                    adress: address,
+                    telephone: phoneNumber,
+                    groupage: bloodType,
+                    admission_date: admissionDate,
+                    id_chambre: roomId,
+                    id_service: department
+                };
+                if (!fullName || !gender || !address || !phoneNumber || !bloodType || !admissionDate || !roomId || !department) {
+                    showMessage('يرجى ملء جميع الحقول المطلوبة', 'error');
+                    return;
+                }
+
+                const response = await axios.put('/patient', patientData, {
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
-                const result = await response.json();
-                if (response.ok) {
-                    loadManagePatients();
+                console.log(response);
+
+                if (response.status === 200) {
+                    managePatientsTable.innerHTML = '';
+                    await loadManagePatients();
                     const modal = bootstrap.Modal.getInstance(updatePatientModal);
                     modal.hide();
-                    showMessage(result.message, 'success');
+                    showMessage(response.data.message || 'تم تحديث بيانات المريض بنجاح', 'success');
                 } else {
-                    showMessage(result.message, 'error');
+                    showMessage(response.data.message || 'فشل في تحديث بيانات المريض', 'error');
                 }
             } catch (error) {
-                showMessage('حدث خطأ أثناء التحديث: ' + error.message, 'error');
+                console.error(error);
+                let errorMessage = 'حدث خطأ أثناء التحديث';
+                if (error.response) {
+                    errorMessage = error.response.data.message || `خطأ: ${error.response.status}`;
+                }
+                showMessage(errorMessage, 'error');
             }
         }
 
@@ -662,22 +774,21 @@
             try {
                 const response = await axios.get(`/patient?id=${id}`);
                 const patient = response.data;
-                console.log(response);
 
-if (patient) {
-    document.getElementById('detailName').textContent = patient.full_name || '-';
-    document.getElementById('detailIdNumber').textContent = patient.NIN || '-';
-    document.getElementById('detailPhoneNumber').textContent = patient.telephone || '-';
-    document.getElementById('detailGender').textContent = patient.sex || '-';
-    document.getElementById('detailBirthDate').textContent = patient.age || '-';
-    document.getElementById('detailBloodType').textContent = patient.groupage || '-';
-    document.getElementById('detailDepartment').textContent = patient.nom_service || '-';
-    document.getElementById('detailAdmissionDate').textContent = patient.Date_entree || '-';
-    document.getElementById('detailUpdatedAt').textContent = patient.Updated_at ? new Date(patient.Updated_at).toLocaleString('ar-SA') : '-';
-    document.getElementById('detailsPatientModalLabel').textContent = `تفاصيل المريض: ${patient.full_name}`;
-}
+                if (patient) {
+                    document.getElementById('detailName').textContent = patient.full_name || '-';
+                    document.getElementById('detailIdNumber').textContent = patient.NIN || '-';
+                    document.getElementById('detailPhoneNumber').textContent = patient.telephone || '-';
+                    document.getElementById('detailGender').textContent = patient.sex === 'homme' ? 'ذكر' : 'أنثى';
+                    document.getElementById('detailBirthDate').textContent = patient.birth_date || '-';
+                    document.getElementById('detailBloodType').textContent = patient.groupage || '-';
+                    document.getElementById('detailDepartment').textContent = patient.nom_service || '-';
+                    document.getElementById('detailAdmissionDate').textContent = patient.Date_entree || '-';
+                    document.getElementById('detailUpdatedAt').textContent = patient.Updated_at ? new Date(patient.Updated_at).toLocaleString('ar-SA') : '-';
+                    document.getElementById('detailsPatientModalLabel').textContent = `تفاصيل المريض: ${patient.full_name}`;
+                }
             } catch (error) {
-                console.log(error);
+                console.error(error);
                 showMessage('حدث خطأ أثناء تحميل تفاصيل المريض', 'error');
             }
         }
@@ -695,9 +806,17 @@ if (patient) {
         addButton.addEventListener('click', addPatient);
         updateButton.addEventListener('click', saveUpdatedPatient);
 
-        window.onload = () => {
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("addDepartment").addEventListener("change", async function() {
+                await loadRoomsForDepartment(this.value, "addAvailableRooms");
+            });
+
+            document.getElementById("updateDepartment").addEventListener("change", async function() {
+                await loadRoomsForDepartment(this.value, "updateAvailableRooms");
+            });
+
             loadManagePatients();
-        };
+        });
     </script>
 </body>
 
