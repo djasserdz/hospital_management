@@ -43,7 +43,6 @@ class Patient {
 
             $this->id_patient = $this->conn->lastInsertId();
 
-            // Check if room is available before assigning
             if (!$this->isRoomAvailable($id_chambre)) {
                 throw new Exception("Room {$id_chambre} is not available");
             }
@@ -60,7 +59,6 @@ class Patient {
                 throw new Exception("Failed to create sejour record");
             }
 
-            // Occupy the room
             if (!$this->occupyRoom($id_chambre)) {
                 throw new Exception("Failed to update room availability");
             }
@@ -75,7 +73,6 @@ class Patient {
         }
     }
 
-    // Get all patients with their service names
     public function readAll() {
         $sql = "
             SELECT 
@@ -93,7 +90,6 @@ class Patient {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Get single patient with related info
     public function readOne() {
         $sql = "
             SELECT *
@@ -112,7 +108,6 @@ class Patient {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // Update patient info and optionally sejour info
     public function update($id_chambre = null, $admission_date = null) {
         try {
             $this->conn->beginTransaction();
@@ -139,12 +134,10 @@ class Patient {
             if ($id_chambre !== null || $admission_date !== null) {
                 $currentSejour = $this->getCurrentSejour();
 
-                // If changing room, check availability first
                 if ($id_chambre !== null && $currentSejour && $currentSejour['id_chambre'] != $id_chambre) {
                     if (!$this->isRoomAvailable($id_chambre)) {
                         throw new Exception("Room {$id_chambre} is not available");
                     }
-                    // Free previous room
                     $this->freeRoom($currentSejour['id_chambre']);
                 }
 
@@ -161,11 +154,9 @@ class Patient {
                 $stmtSejour = $this->conn->prepare($sqlSejour);
                 $stmtSejour->bindParam(':id_patient', $this->id_patient);
 
-                // Bind new or old room
                 $bindRoom = $id_chambre ?? ($currentSejour['id_chambre'] ?? null);
                 $stmtSejour->bindParam(':id_chambre', $bindRoom);
 
-                // Bind new or old admission date, default to today if missing
                 $bindDate = $admission_date ?? ($currentSejour['Date_entree'] ?? date('Y-m-d'));
                 $stmtSejour->bindParam(':Date_entree', $bindDate);
 
@@ -173,7 +164,6 @@ class Patient {
                     throw new Exception("Failed to update sejour record");
                 }
 
-                // Occupy new room if changed
                 if ($id_chambre !== null) {
                     $this->occupyRoom($id_chambre);
                 }
@@ -189,7 +179,6 @@ class Patient {
         }
     }
 
-    // Mark patient discharge by setting Date_sortie and free room
     public function discharge($discharge_date = null) {
         try {
             $this->conn->beginTransaction();
@@ -210,7 +199,6 @@ class Patient {
                 throw new Exception("Failed to update discharge date");
             }
 
-            // Free room
             if (!$this->freeRoom($currentSejour['id_chambre'])) {
                 throw new Exception("Failed to free room");
             }
@@ -225,7 +213,6 @@ class Patient {
         }
     }
 
-    // Get current active sejour (stay) for the patient
     private function getCurrentSejour() {
         $sql = "SELECT * FROM Sejour WHERE id_patient = :id_patient AND Date_sortie IS NULL";
         $stmt = $this->conn->prepare($sql);
@@ -234,7 +221,6 @@ class Patient {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // Check if a room is available
     private function isRoomAvailable($id_chambre) {
         $sql = "SELECT Available FROM Chambres WHERE id_chambre = :id_chambre";
         $stmt = $this->conn->prepare($sql);
@@ -244,7 +230,6 @@ class Patient {
         return $row && $row['Available'] == 1;
     }
 
-    // Mark room as occupied (Available = 0)
     private function occupyRoom($id_chambre) {
         $sql = "UPDATE Chambres SET Available = 0 WHERE id_chambre = :id_chambre";
         $stmt = $this->conn->prepare($sql);
@@ -252,7 +237,6 @@ class Patient {
         return $stmt->execute();
     }
 
-    // Mark room as free (Available = 1)
     private function freeRoom($id_chambre) {
         $sql = "UPDATE Chambres SET Available = 1 WHERE id_chambre = :id_chambre";
         $stmt = $this->conn->prepare($sql);
