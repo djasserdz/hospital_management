@@ -349,8 +349,7 @@
                 <table id="managePatientsTable" class="table table-striped table-hover">
                     <thead>
                         <tr>
-                            <th>الاسم</th>
-                            <th>اللقب</th>
+                            <th>الاسم و اللقب</th>
                             <th>رقم الغرفة</th>
                             <th>الجنس</th>
                             <th>الحالة</th>
@@ -377,7 +376,7 @@
                 <table id="allPatientsTable" class="table table-striped table-hover">
                     <thead>
                         <tr>
-                            <th>الاسم</th>
+                            <th>الاسم واللقب</th>
                             <th>اللقب</th>
                             <th>رقم الغرفة</th>
                             <th>الجنس</th>
@@ -404,101 +403,80 @@
                 </div>
                 <div class="modal-body">
                     <form id="updatePatientForm" class="row g-3">
+                        <!-- Status -->
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateStatus">الحالة</label>
-                                <select class="form-select" id="updateStatus" name="status" required>
-                                    <option value="">اختر الحالة</option>
-                                    <option value="حالة مستقرة">حالة مستقرة</option>
-                                    <option value="حالة حرجة">حالة حرجة</option>
-                                    <option value="حالة خطيرة">حالة خطيرة</option>
-                                    <option value="حالة غير مستقرة">حالة غير مستقرة</option>
-                                    <option value="حالة وفاة سريرية">حالة وفاة سريرية</option>
-                                    <option value="حالة وفاة">حالة وفاة</option>
-                                </select>
-                            </div>
+                            <label for="updateStatus">الحالة</label>
+                            <select class="form-select" id="updateStatus" name="etat_santee" required>
+                                <option value="">اختر الحالة</option>
+                                <option value="حالة مستقرة">حالة مستقرة</option>
+                                <option value="حالة حرجة">حالة حرجة</option>
+                                <option value="حالة خطيرة">حالة خطيرة</option>
+                                <option value="حالة غير مستقرة">حالة غير مستقرة</option>
+                                <option value="حالة وفاة سريرية">حالة وفاة سريرية</option>
+                                <option value="حالة وفاة">حالة وفاة</option>
+                            </select>
                         </div>
+                    
+                        <!-- Prescription: medication, dosage, frequency, instruction -->
                         <div class="col-md-12">
-                            <div class="form-group">
-                                <label>الأدوية</label>
-                                <div id="recommendations">
-                                    <div class="input-group mb-2 recommendation-item">
-                                        <input type="text" class="form-control" placeholder="الدواء"
-                                            name="medication[]">
-                                        <input type="text" class="form-control" placeholder="الجرعة" name="dosage[]">
-                                        <button type="button" class="btn btn-outline-danger"
-                                            onclick="removeRecommendation(this)">حذف</button>
-                                    </div>
+                            <label>الأدوية</label>
+                            <div id="prescriptions">
+                                <div class="input-group mb-2 prescription-item">
+                                    <input type="text" class="form-control" placeholder="الدواء" name="medicament[]">
+                                    <input type="text" class="form-control" placeholder="الجرعة" name="dosage[]">
+                                    <input type="text" class="form-control" placeholder="التردد" name="frequency[]">
+                                    <input type="text" class="form-control" placeholder="تعليمات" name="instruction[]">
+                                    <button type="button" class="btn btn-outline-danger" onclick="removePrescription(this)">حذف</button>
                                 </div>
-                                <button type="button" class="btn btn-outline-primary mt-2"
-                                    onclick="addRecommendation('recommendations')">إضافة دواء</button>
                             </div>
+                            <button type="button" class="btn btn-outline-primary mt-2" onclick="addPrescription()">إضافة دواء</button>
+                        </div>
+                    
+                        <!-- Diagnosis -->
+                        <div class="col-md-12">
+                            <label for="updateDiagnosis">التشخيص</label>
+                            <textarea class="form-control" id="updateDiagnosis" name="diagnosis" rows="3" placeholder="أدخل التشخيص هنا" required></textarea>
+                        </div>
+                    
+                        <!-- Treatment Method -->
+                        <div class="col-md-12">
+                            <label for="updateTreatmentMethod">طريقة العلاج</label>
+                            <textarea class="form-control" id="updateTreatmentMethod" name="treatment_method" rows="3" placeholder="أدخل طريقة العلاج هنا" required></textarea>
+                        </div>
+                    
+                        <!-- Suivi / Vital Signs -->
+                        <div class="col-md-6">
+                            <label for="updateTension">ضغط الدم (mmHg)</label>
+                            <input type="text" class="form-control" id="updateTension" name="tension" placeholder="مثال: 120/80">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="updateTemperature">درجة الحرارة (°C)</label>
+                            <input type="number" step="0.1" class="form-control" id="updateTemperature" name="temperature" placeholder="مثال: 36.5">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="updateFrequenceCardiaque">معدل ضربات القلب (نبضة/دقيقة)</label>
+                            <input type="number" class="form-control" id="updateFrequenceCardiaque" name="frequence_quardiaque" placeholder="مثال: 80">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="updateSaturationOxygene">نسبة الأكسجين في الدم (%)</label>
+                            <input type="number" class="form-control" id="updateSaturationOxygene" name="saturation_oxygene" placeholder="مثال: 98">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="updateGlycemie">مستوى الجلوكوز في الدم (mg/dL)</label>
+                            <input type="number" step="0.1" class="form-control" id="updateGlycemie" name="glycemie" placeholder="مثال: 90">
                         </div>
                         <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="updateDiagnosis">التشخيص</label>
-                                <textarea class="form-control" id="updateDiagnosis" name="diagnosis" rows="3"
-                                    placeholder="أدخل التشخيص هنا" required></textarea>
-                            </div>
+                            <label for="updateRemarque">ملاحظات</label>
+                            <textarea class="form-control" id="updateRemarque" name="Remarque" rows="3" placeholder="أدخل ملاحظات إضافية"></textarea>
                         </div>
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="updateTreatmentMethod">طريقة العلاج</label>
-                                <textarea class="form-control" id="updateTreatmentMethod" name="treatment_method"
-                                    rows="3" placeholder="أدخل طريقة العلاج هنا" required></textarea>
-                            </div>
-                        </div>
-                        <!-- البيانات الحيوية -->
+                    
+                        <!-- Date of Observation -->
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateTemperature">درجة الحرارة (°C)</label>
-                                <input type="number" step="0.1" class="form-control" id="updateTemperature"
-                                    name="temperature" placeholder="مثال: 36.5">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateHeartRate">معدل ضربات القلب (نبضة/دقيقة)</label>
-                                <input type="number" class="form-control" id="updateHeartRate" name="heart_rate"
-                                    placeholder="مثال: 80">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateRespiratoryRate">معدل التنفس (نفس/دقيقة)</label>
-                                <input type="number" class="form-control" id="updateRespiratoryRate"
-                                    name="respiratory_rate" placeholder="مثال: 16">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateBloodPressure">ضغط الدم (mmHg)</label>
-                                <input type="text" class="form-control" id="updateBloodPressure" name="blood_pressure"
-                                    placeholder="مثال: 120/80">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateOxygenSaturation">نسبة الأكسجين في الدم (%)</label>
-                                <input type="number" class="form-control" id="updateOxygenSaturation"
-                                    name="oxygen_saturation" placeholder="مثال: 98">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateWeight">الوزن (كجم)</label>
-                                <input type="number" step="0.1" class="form-control" id="updateWeight" name="weight"
-                                    placeholder="مثال: 70">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateHeight">الطول (سم)</label>
-                                <input type="number" class="form-control" id="updateHeight" name="height"
-                                    placeholder="مثال: 170">
-                            </div>
+                            <label for="updateDateObservation">تاريخ الملاحظة</label>
+                            <input type="datetime-local" class="form-control" id="updateDateObservation" name="Date_observation">
                         </div>
                     </form>
+                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
@@ -560,418 +538,680 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const patientMessage = document.getElementById('patientMessage');
-        const allPatientsMessage = document.getElementById('allPatientsMessage');
-        const managePatientsTable = document.getElementById('managePatientsTable').getElementsByTagName('tbody')[0];
-        const allPatientsTable = document.getElementById('allPatientsTable').getElementsByTagName('tbody')[0];
-        const addButton = document.getElementById('addButton');
-        const updateButton = document.getElementById('updateButton');
-        const addPatientModal = document.getElementById('addPatientModal');
-        const updatePatientModal = document.getElementById('updatePatientModal');
-        const viewRecommendationsModal = document.getElementById('viewRecommendationsModal');
-        const selectRoomModalAdd = document.getElementById('selectRoomModalAdd');
-        let selectedPatientId = null;
-        let selectedSejourId = null;
-        const sidebar = document.querySelector('.sidebar');
-        const toggleSidebarBtn = document.getElementById('toggleSidebar');
-        const content = document.querySelector('.content');
+        // DOM Elements
+const patientMessage = document.getElementById('patientMessage');
+const allPatientsMessage = document.getElementById('allPatientsMessage');
+const managePatientsTable = document.getElementById('managePatientsTable').getElementsByTagName('tbody')[0];
+const allPatientsTable = document.getElementById('allPatientsTable').getElementsByTagName('tbody')[0];
+const updateButton = document.getElementById('updateButton');
+const updatePatientModal = document.getElementById('updatePatientModal');
+const viewRecommendationsModal = document.getElementById('viewRecommendationsModal');
+const selectRoomModalAdd = document.getElementById('selectRoomModalAdd');
+const sidebar = document.querySelector('.sidebar');
+const toggleSidebarBtn = document.getElementById('toggleSidebar');
+const content = document.querySelector('.content');
 
-        function showMessage(text, type) {
-            patientMessage.textContent = text;
-            patientMessage.className = `message ${type}`;
-            patientMessage.style.display = 'block';
-            setTimeout(() => patientMessage.style.display = 'none', 3000);
+// Global Variables
+let selectedPatientId = null;
+let selectedSejourId = null;
+let isAddMode = false;
+
+// Utility Functions
+function showMessage(text, type) {
+    if (patientMessage) {
+        patientMessage.textContent = text;
+        patientMessage.className = `message ${type}`;
+        patientMessage.style.display = 'block';
+        setTimeout(() => patientMessage.style.display = 'none', 3000);
+    }
+}
+
+function showMessageAll(text, type) {
+    if (allPatientsMessage) {
+        allPatientsMessage.textContent = text;
+        allPatientsMessage.className = `message ${type}`;
+        allPatientsMessage.style.display = 'block';
+        setTimeout(() => allPatientsMessage.style.display = 'none', 3000);
+    }
+}
+
+// Prescription Management
+function addPrescription() {
+    const container = document.getElementById('prescriptions');
+    if (!container) return;
+    
+    const div = document.createElement('div');
+    div.classList.add('input-group', 'mb-2', 'prescription-item');
+    div.innerHTML = `
+        <input type="text" class="form-control" placeholder="الدواء" name="medicament[]">
+        <input type="text" class="form-control" placeholder="الجرعة" name="dosage[]">
+        <input type="text" class="form-control" placeholder="التردد" name="frequency[]">
+        <input type="text" class="form-control" placeholder="تعليمات" name="instruction[]">
+        <button type="button" class="btn btn-outline-danger" onclick="removePrescription(this)">حذف</button>
+    `;
+    container.appendChild(div);
+}
+
+function removePrescription(button) {
+    if (button && button.parentElement) {
+        button.parentElement.remove();
+    }
+}
+
+// Room Management
+function openRoomSelection(sejourId = null) {
+    selectedSejourId = sejourId;
+    const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (nurse && nurse.id) {
+        loadAvailableRooms(nurse.id);
+    } else {
+        showMessage('خطأ في بيانات المستخدم', 'error');
+    }
+}
+
+async function loadAvailableRooms(nurse_id) {
+    try {
+        const response = await axios.get('/nurse/room', {
+            params: { nurse_id: nurse_id }
+        });
+
+        const rooms = response.data;
+        const container = document.getElementById('availableRoomsAdd');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!Array.isArray(rooms) || rooms.length === 0) {
+            container.innerHTML = '<p class="text-center">لا توجد غرف متاحة</p>';
+            return;
         }
 
-        function showMessageAll(text, type) {
-            allPatientsMessage.textContent = text;
-            allPatientsMessage.className = `message ${type}`;
-            allPatientsMessage.style.display = 'block';
-            setTimeout(() => allPatientsMessage.style.display = 'none', 3000);
+        rooms.forEach(room => {
+            const roomBtn = document.createElement('button');
+            roomBtn.className = 'btn btn-outline-primary m-1';
+            roomBtn.textContent = room.numero_cr || room.room_number || 'غير محدد';
+            roomBtn.onclick = () => selectRoom(room);
+            container.appendChild(roomBtn);
+        });
+
+    } catch (error) {
+        console.error('Error loading rooms:', error);
+        showMessage('حدث خطأ أثناء تحميل الغرف', 'error');
+    }
+}
+
+function selectRoom(room) {
+    if (!selectedSejourId) {
+        showMessage('خطأ في تحديد الإقامة', 'error');
+        return;
+    }
+
+    const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!nurse || !nurse.id) {
+        showMessage('خطأ في بيانات المستخدم', 'error');
+        return;
+    }
+
+    // Update room assignment
+    axios.put('/sejour/room', {
+        id_sejour: selectedSejourId,
+        id_chambre: room.id_chambre || room.room_id,
+        id_agent: nurse.id
+    })
+    .then(response => {
+        if (response.status === 200) {
+            loadManagePatients();
+            showMessage('تم تحديث رقم الغرفة بنجاح', 'success');
+        } else {
+            showMessage('فشل في تحديث الغرفة', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating room:', error);
+        showMessage('حدث خطأ أثناء التحديث', 'error');
+    })
+    .finally(() => {
+        const modal = bootstrap.Modal.getInstance(selectRoomModalAdd);
+        if (modal) modal.hide();
+    });
+}
+
+// Patient Data Loading
+async function loadManagePatients() {
+    try {
+        const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!nurse || !nurse.id) {
+            showMessage('خطأ في بيانات المستخدم', 'error');
+            return;
         }
 
-        async function loadAvailableRooms(isAddMode = false) {
+        const response = await axios.get(`/nurse/patients?nurse_id=${nurse.id}`);
+        
+        const patientsData = response.data.data || response.data;
+        const patients = Array.isArray(patientsData) ? patientsData : [];
+        
+        console.log("Manage Patients Data:", patients);
+        displayPatients(managePatientsTable, patients, true);
+
+    } catch (error) {
+        console.error('Error loading patients:', error);
+        showMessage('حدث خطأ أثناء تحميل المرضى', 'error');
+    }
+}
+
+async function loadAllPatients() {
+    try {
+        const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!nurse || !nurse.id) {
+            showMessageAll('خطأ في بيانات المستخدم', 'error');
+            return;
+        }
+
+        const response = await axios.get(`/nurse/patients?nurse_id=${nurse.id}`);
+        
+        const patientsData = response.data.data || response.data;
+        const patients = Array.isArray(patientsData) ? patientsData : [];
+        
+        console.log("All Patients Data:", patients);
+        displayPatients(allPatientsTable, patients, false);
+        
+    } catch (error) {
+        console.error('Error loading patients:', error);
+        showMessageAll('حدث خطأ أثناء تحميل المرضى', 'error');
+    }
+}
+
+function displayPatients(table, patientsList, isManageSection) {
+    if (!table) return;
+
+    console.log("displayPatients received:", patientsList);
+    table.innerHTML = '';
+
+    if (!Array.isArray(patientsList) || patientsList.length === 0) {
+        const row = table.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = isManageSection ? 7 : 7;
+        cell.textContent = 'لا توجد بيانات للعرض';
+        cell.style.textAlign = 'center';
+        return;
+    }
+
+    patientsList.forEach(patient => {
+        const row = table.insertRow();
+
+        const isActive = (patient.Date_sortie || patient.Date_sortiee) ? 'غير نشط' : 'نشط';
+        const patientName = patient.full_name || `${patient.Nom || ''} ${patient.Prénom || ''}`.trim() || '-';
+        const roomNumber = patient.Numero_cr || patient.Numéro_CR || '-';
+        const patientId = patient.id_patient || patient.patient_id;
+        const sejourId = patient.id_séjour || patient.id_sejour || patient.sejour_id;
+
+        if (isManageSection) {
+            // Manage Patients section
+            row.innerHTML = `
+                <td>${patientName}</td>
+                <td class="room-cell">
+                    ${roomNumber}
+                    <i class="bi bi-pencil-square room-icon"
+                       onclick="openRoomSelection(${sejourId})"
+                       title="تغيير الغرفة"></i>
+                </td>
+                <td>${patient.sex || patient.Gender || '-'}</td>
+                <td>${isActive}</td>
+                <td class="notes-cell">
+                    <i class="bi bi-eye notes-icon"
+                       onclick="viewRecommendations(${sejourId})"
+                       title="عرض التوصيات"
+                       data-bs-toggle="modal"
+                       data-bs-target="#viewRecommendationsModal"></i>
+                </td>
+                <td>
+                    <i class="bi bi-eye notes-icon"
+                       onclick="viewPatientDetails(${patientId})"
+                       title="عرض التفاصيل"
+                       data-bs-toggle="modal"
+                       data-bs-target="#viewPatientDetailsModal"></i>
+                </td>
+                <td>
+                    <button class="btn btn-primary btn-sm"
+                            onclick="openUpdateModal(${patientId}, ${sejourId})"
+                            data-bs-toggle="modal"
+                            data-bs-target="#updatePatientModal">
+                        تحديث
+                    </button>
+                </td>
+            `;
+        } else {
+            // All Patients section
+            row.innerHTML = `
+                <td>${patientName}</td>
+                <td>${patient.NIN || '-'}</td>
+                <td>${roomNumber}</td>
+                <td>${patient.sex || patient.Gender || '-'}</td>
+                <td>${patient.nom_service || patient.Nom_S || '-'}</td>
+                <td>${isActive}</td>
+                <td>
+                    ${(patient.Date_sortie || patient.Date_sortiee)
+                        ? '<span class="text-muted">تم الخروج</span>'
+                        : `<button class="btn btn-warning btn-sm"
+                                   onclick="togglePatientStatus(${sejourId})">
+                               إنهاء الإقامة
+                           </button>`
+                    }
+                </td>
+            `;
+        }
+    });
+}
+
+// Modal Functions
+function openUpdateModal(patientId, sejourId) {
+    selectedPatientId = patientId;
+    selectedSejourId = sejourId;
+    
+    // Clear previous form data
+    const form = document.getElementById('updatePatientForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Reset prescriptions to default state
+    const prescriptionsContainer = document.getElementById('prescriptions');
+    if (prescriptionsContainer) {
+        prescriptionsContainer.innerHTML = `
+            <div class="input-group mb-2 prescription-item">
+                <input type="text" class="form-control" placeholder="الدواء" name="medicament[]">
+                <input type="text" class="form-control" placeholder="الجرعة" name="dosage[]">
+                <input type="text" class="form-control" placeholder="التردد" name="frequency[]">
+                <input type="text" class="form-control" placeholder="تعليمات" name="instruction[]">
+                <button type="button" class="btn btn-outline-danger" onclick="removePrescription(this)">حذف</button>
+            </div>
+        `;
+    }
+
+    // Set current date-time for observation
+    const dateObservation = document.getElementById('updateDateObservation');
+    if (dateObservation) {
+        const now = new Date();
+        const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+        dateObservation.value = localDateTime;
+    }
+}
+
+async function saveUpdatedPatient() {
+    try {
+        if (!selectedSejourId) {
+            throw new Error('لم يتم تحديد الإقامة');
+        }
+
+        const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!nurse || !nurse.id) {
+            throw new Error('خطأ في بيانات المستخدم');
+        }
+
+        // Collect prescriptions
+        const prescriptions = [];
+        const prescriptionItems = document.querySelectorAll('#prescriptions .prescription-item');
+        prescriptionItems.forEach(item => {
+            const medicament = item.querySelector('input[name="medicament[]"]')?.value?.trim();
+            const dosage = item.querySelector('input[name="dosage[]"]')?.value?.trim();
+            const frequency = item.querySelector('input[name="frequency[]"]')?.value?.trim();
+            const instruction = item.querySelector('input[name="instruction[]"]')?.value?.trim();
+            
+            if (medicament || dosage || frequency || instruction) {
+                prescriptions.push({ medicament, dosage, frequency, instruction });
+            }
+        });
+
+        // Collect form data
+        const status = document.getElementById('updateStatus')?.value;
+        const diagnosis = document.getElementById('updateDiagnosis')?.value?.trim();
+        const treatmentMethod = document.getElementById('updateTreatmentMethod')?.value?.trim();
+        const tension = document.getElementById('updateTension')?.value?.trim();
+        const temperature = parseFloat(document.getElementById('updateTemperature')?.value) || null;
+        const frequenceCardiaque = parseInt(document.getElementById('updateFrequenceCardiaque')?.value) || null;
+        const saturationOxygene = parseInt(document.getElementById('updateSaturationOxygene')?.value) || null;
+        const glycemie = parseFloat(document.getElementById('updateGlycemie')?.value) || null;
+        const remarque = document.getElementById('updateRemarque')?.value?.trim();
+        const dateObservation = document.getElementById('updateDateObservation')?.value;
+
+        if (!status) {
+            throw new Error('يرجى تحديد حالة المريض');
+        }
+
+        // Update prescriptions
+        if (prescriptions.length > 0) {
             try {
-                const response = await fetch('api/routes/chambres.php');
-                const rooms = await response.json();
-                const container = document.getElementById('availableRoomsAdd');
-                container.innerHTML = '';
-                rooms.forEach(room => {
-                    const roomBtn = document.createElement('button');
-                    roomBtn.className = 'btn btn-outline-primary m-1';
-                    roomBtn.textContent = room.Numéro_CR;
-                    roomBtn.onclick = () => {
-                        if (isAddMode) {
-                            document.getElementById('addRoom').value = room.Numéro_CR;
-                            document.getElementById('addRoom').dataset.id_chambre = room.id_chambre;
-                        } else {
-                            fetch('api/routes/sejours.php', {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    id_séjour: selectedSejourId,
-                                    id_chambre: room.id_chambre,
-                                    id_agent: JSON.parse(localStorage.getItem('loggedInUser')).id
-                                })
-                            }).then(response => response.json()).then(result => {
-                                if (response.ok) {
-                                    //loadManagePatients();
-                                    showMessage('تم تحديث رقم الغرفة بنجاح', 'success');
-                                } else {
-                                    showMessage(result.message, 'error');
-                                }
-                            });
-                        }
-                        bootstrap.Modal.getInstance(selectRoomModalAdd).hide();
-                    };
-                    container.appendChild(roomBtn);
+                // Delete existing prescriptions
+                const existingPrescriptionsResponse = await axios.get('/prescriptions', {
+                    params: { id_sejour: selectedSejourId }
                 });
 
-            } catch (error) {
-                showMessage('حدث خطأ أثناء تحميل الغرف', 'error');
-            }
-        }
-
-        /*async function loadManagePatients() {
-            try {
-                const response = await fetch('api/routes/sejours.php?active=true');
-                const patients = await response.json();
-                displayPatients(managePatientsTable, patients, true);
-            } catch (error) {
-                showMessage('حدث خطأ أثناء تحميل المرضى', 'error');
-            }
-        }*/
-
-        async function loadAllPatients() {
-            try {
-                const response = await axios('api/routes/patients.php');
-                const patients = response.data;
-                displayPatients(allPatientsTable, patients, true);
-            } catch (error) {
-                showMessageAll('حدث خطأ أثناء تحميل المرضى', 'error');
-            }
-        }
-
-        function displayPatients(table, patientsList, isManageSection) {
-            table.innerHTML = '';
-            patientsList.forEach(patient => {
-                const row = table.insertRow();
-                if (isManageSection) {
-                    row.innerHTML = `
-                        <td>${patient.Nom || '-'}</td>
-                        <td>${patient.Prénom || '-'}</td>
-                        <td class="room-cell">
-                            ${patient.room || '-'}
-                            <i class="bi bi-pencil-square room-icon" onclick="openRoomSelection(${patient.id_séjour})" 
-                               data-bs-toggle="modal" data-bs-target="#selectRoomModalAdd"></i>
-                        </td>
-                        <td>${patient.Gender || '-'}</td>
-                        <td>${patient.Status || '-'}</td>
-                        <td class="notes-cell">
-                            <i class="bi bi-eye notes-icon" onclick="viewRecommendations(${patient.id_séjour})" 
-                               data-bs-toggle="modal" data-bs-target="#viewRecommendationsModal"></i>
-                        </td>
-                        <td class="notes-cell">
-                            <i class="bi bi-eye notes-icon" onclick="viewPatientDetails(${patient.id_patient})" 
-                               data-bs-toggle="modal" data-bs-target="#viewPatientDetailsModal"></i>
-                        </td>
-                        <td>
-                            <button class="btn btn-primary btn-sm" onclick="updatePatient(${patient.id_patient}, ${patient.id_séjour})" 
-                                    data-bs-toggle="modal" data-bs-target="#updatePatientModal">تحديث</button>
-                        </td>
-                    `;
-                } else {
-                    row.innerHTML = `
-                        <td>${patient.Nom || '-'}</td>
-                        <td>${patient.Prénom || '-'}</td>
-                        <td>${patient.Date_sortie ? '-' : patient.room || '-'}</td>
-                        <td>${patient.Gender || '-'}</td>
-                        <td>${patient.Status || '-'}</td>
-                        <td>${patient.Date_sortie ? 'غير مفعل' : 'مفعل'}</td>
-                        <td>
-                            <button class="btn btn-${patient.Date_sortie ? 'success' : 'danger'} btn-sm" 
-                                    onclick="togglePatientStatus(${patient.id_séjour})">${patient.Date_sortie ? 'تفعيل' : 'تعطيل'}</button>
-                        </td>
-                    `;
-                }
-            });
-        }
-
-        function openRoomSelection(sejour_id) {
-            selectedSejourId = sejour_id;
-            loadAvailableRooms();
-        }
-        async function saveUpdatedPatient() {
-            try {
-                const recommendations = [];
-                document.querySelectorAll('#recommendations .recommendation-item').forEach(item => {
-                    const medication = item.querySelector('input[name="medication[]"]').value.trim();
-                    const dosage = item.querySelector('input[name="dosage[]"]').value.trim();
-                    if (medication || dosage) recommendations.push({ medication, dosage });
-                });
-
-                const patientData = {
-                    id_séjour: selectedSejourId,
-                    status: document.getElementById('updateStatus').value,
-                    recommendations: recommendations,
-                    diagnosis: document.getElementById('updateDiagnosis').value.trim(),
-                    treatment_method: document.getElementById('updateTreatmentMethod').value.trim(),
-                    temperature: parseFloat(document.getElementById('updateTemperature').value) || null,
-                    heart_rate: parseInt(document.getElementById('updateHeartRate').value) || null,
-                    respiratory_rate: parseInt(document.getElementById('updateRespiratoryRate').value) || null,
-                    blood_pressure: document.getElementById('updateBloodPressure').value.trim() || null,
-                    oxygen_saturation: parseInt(document.getElementById('updateOxygenSaturation').value) || null,
-                    weight: parseFloat(document.getElementById('updateWeight').value) || null,
-                    height: parseInt(document.getElementById('updateHeight').value) || null,
-                    id_infirmier: JSON.parse(localStorage.getItem('loggedInUser')).id
-                };
-
-                if (!patientData.status) {
-                    throw new Error('يرجى تحديد حالة المريض');
-                }
-
-                const sejourResponse = await fetch('api/routes/sejours.php', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id_séjour: selectedSejourId,
-                        Status: patientData.status,
-                        Diagnosis: patientData.diagnosis,
-                        Treatment_method: patientData.treatment_method
-                    })
-                });
-
-                if (sejourResponse.ok) {
-                    await fetch('api/routes/prescriptions.php', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id_séjour: selectedSejourId })
-                    });
-
-                    for (const rec of recommendations) {
-                        await fetch('api/routes/prescriptions.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                Date_prescription: new Date().toISOString().split('T')[0],
-                                Médicament: rec.medication,
-                                Dosage: rec.dosage,
-                                id_séjour: selectedSejourId
-                            })
+                if (existingPrescriptionsResponse.status === 200 && existingPrescriptionsResponse.data.prescriptions) {
+                    const existingPrescriptions = existingPrescriptionsResponse.data.prescriptions;
+                    
+                    for (const prescription of existingPrescriptions) {
+                        await axios.delete('/prescription', {
+                            params: { id: prescription.id_prescription }
                         });
                     }
+                }
 
-                    await fetch('api/routes/suivis.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            Date_observation: new Date().toISOString().split('T')[0],
-                            Heure_d_observation: new Date().toTimeString().split(' ')[0],
-                            État_santé: patientData.status,
-                            Tension_artérielle: patientData.blood_pressure,
-                            Température: patientData.temperature,
-                            Fréquence_cardiaque: patientData.heart_rate,
-                            Saturation_oxygène: patientData.oxygen_saturation,
-                            Poids: patientData.weight,
-                            Taille: patientData.height,
-                            id_séjour: selectedSejourId,
-                            id_infirmier: patientData.id_infirmier
-                        })
+                // Add new prescriptions
+                for (const prescription of prescriptions) {
+                    await axios.post('/prescription', {
+                        id_sejour: selectedSejourId,
+                        Medicament: prescription.medicament || '',
+                        Dosage: prescription.dosage || '',
+                        frequence: prescription.frequency || '',
+                        instructions: prescription.instruction || ''
                     });
-
-                    //loadManagePatients();
-                    loadAllPatients();
-                    const modal = bootstrap.Modal.getInstance(updatePatientModal);
-                    modal.hide();
-                    showMessage('تم تحديث بيانات المريض بنجاح', 'success');
-                } else {
-                    const result = await sejourResponse.json();
-                    showMessage(result.message, 'error');
                 }
-            } catch (error) {
-                showMessage('حدث خطأ أثناء التحديث: ' + error.message, 'error');
+            } catch (prescriptionError) {
+                console.error('Prescription update error:', prescriptionError);
+                // Continue with suivi creation even if prescription update fails
             }
         }
 
-        async function togglePatientStatus(id) {
-            try {
-                const response = await fetch('api/routes/sejours.php', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id_séjour: id,
-                        Date_sortie: new Date().toISOString().split('T')[0]
-                    })
-                });
+        // Create suivi record
+        const suiviData = {
+            Date_observation: dateObservation || new Date().toISOString().split('T')[0],
+            id_sejour: selectedSejourId,
+            id_nurse: nurse.id,
+            etat_santee: status,
+            tension: tension || null,
+            temperature: temperature,
+            frequence_quardiaque: frequenceCardiaque,
+            saturation_oxygene: saturationOxygene,
+            glycemie: glycemie,
+            Remarque: remarque || null
+        };
 
-                const result = await response.json();
-                if (response.ok) {
-                    //loadManagePatients();
-                    loadAllPatients();
-                    showMessageAll('تم تعطيل المريض بنجاح', 'success');
-                } else {
-                    showMessageAll(result.message, 'error');
-                }
-            } catch (error) {
-                showMessageAll('حدث خطأ أثناء تغيير حالة المريض', 'error');
-            }
+        const suiviResponse = await axios.post('/suivis', suiviData);
+
+        if (suiviResponse.status === 200 || suiviResponse.status === 201) {
+            // Reload patient data
+            await loadManagePatients();
+            await loadAllPatients();
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(updatePatientModal);
+            if (modal) modal.hide();
+            
+            showMessage('تم تحديث بيانات المريض بنجاح', 'success');
+        } else {
+            throw new Error('فشل في حفظ بيانات المتابعة');
         }
 
-        async function viewRecommendations(id_séjour) {
-            try {
-                // Get all prescriptions
-                const prescriptionsRes = await axios.get('api/routes/prescriptions.php');
-                const allPrescriptions = prescriptionsRes.data;
+    } catch (error) {
+        console.error('Error saving patient data:', error);
+        showMessage(error.message || 'حدث خطأ أثناء التحديث', 'error');
+    }
+}
 
-                // Filter prescriptions for this stay
-                const recommendations = Array.isArray(allPrescriptions)
-                    ? allPrescriptions.filter(p => p.id_séjour == id_séjour)
-                    : [];
+async function togglePatientStatus(sejourId) {
+    if (!sejourId) {
+        showMessageAll('خطأ في تحديد الإقامة', 'error');
+        return;
+    }
 
-                // Get sejour details
-                const sejourRes = await axios.get(`api/routes/sejours.php?id=${id_séjour}`);
-                const sejour = sejourRes.data;
+    try {
+        const response = await axios.put('/sejour/status', {
+            id_sejour: sejourId,
+            Date_sortie: new Date().toISOString().split('T')[0]
+        });
 
-                const content = document.getElementById('viewRecommendationsContent');
-                content.innerHTML = `
+        if (response.status === 200) {
+            await loadManagePatients();
+            await loadAllPatients();
+            showMessageAll('تم إنهاء إقامة المريض بنجاح', 'success');
+        } else {
+            throw new Error('فشل في تحديث حالة المريض');
+        }
+    } catch (error) {
+        console.error('Error toggling patient status:', error);
+        showMessageAll('حدث خطأ أثناء تغيير حالة المريض', 'error');
+    }
+}
+
+async function viewRecommendations(sejourId) {
+    try {
+        if (!sejourId) {
+            throw new Error('لم يتم تحديد الإقامة');
+        }
+
+        // Get prescriptions for this sejour
+        const prescriptionsResponse = await axios.get('/prescription', {
+            params: { id_sejour: sejourId }
+        });
+
+        const prescriptions = prescriptionsResponse.data;
+        console.log(prescriptionsResponse);
+        
+        // Get sejour details if available
+        let sejourDetails = {};
+        try {
+            const sejourResponse = await axios.get('/patient/detail', {
+                params: { id: sejourId }
+            });
+            sejourDetails = sejourResponse.data || {};
+        } catch (sejourError) {
+            console.warn('Could not load sejour details:', sejourError);
+        }
+
+        const content = document.getElementById('viewRecommendationsContent');
+        if (!content) return;
+
+        content.innerHTML = `
             <div class="update-info">
-                <strong>آخر تحديث:</strong> ${sejour.Updated_at ? new Date(sejour.Updated_at).toLocaleString('ar-SA') : '-'}<br>
-                <strong>بواسطة:</strong> ${sejour.nurse_name || '-'}
+                <strong>آخر تحديث:</strong> ${sejourDetails.Updated_at ? new Date(sejourDetails.Updated_at).toLocaleString('ar-SA') : '-'}<br>
+                <strong>بواسطة:</strong> ${sejourDetails.nurse_name || '-'}
             </div>
             <h5>الإجراءات المعمول بها:</h5>
             <h6>الأدوية:</h6>
-            <ul>
-                ${recommendations.length > 0
-                        ? recommendations.map(r => `<li>${r.Médicament || '-'} - ${r.Dosage || '-'}</li>`).join('')
-                        : '<li>لا توجد توصيات</li>'
-                    }
-            </ul>
+            <div class="prescription-list">
+                ${prescriptions.length > 0
+                    ? prescriptions.map(p => `
+                        <div class="prescription-item mb-2 p-2 border rounded">
+                            <strong>الدواء:</strong> ${p.Medicament || p.medicament || '-'}<br>
+                            <strong>الجرعة:</strong> ${p.Dosage || p.dosage || '-'}<br>
+                            <strong>التردد:</strong> ${p.frequence || p.frequency || '-'}<br>
+                            <strong>التعليمات:</strong> ${p.instructions || p.instruction || '-'}
+                        </div>
+                    `).join('')
+                    : '<p>لا توجد أدوية محددة</p>'
+                }
+            </div>
             <h6>التشخيص:</h6>
-            <p>${sejour.Diagnosis || '-'}</p>
+            <p>${sejourDetails.Diagnosis || '-'}</p>
             <h6>طريقة العلاج:</h6>
-            <p>${sejour.Treatment_method || '-'}</p>
+            <p>${sejourDetails.Treatment_method || '-'}</p>
         `;
 
-                document.getElementById('viewRecommendationsModalLabel').textContent =
-                    `التوصيات الطبية لـ ${sejour.Nom || ''} ${sejour.Prénom || ''}`;
-            } catch (error) {
-                console.error('Error loading recommendations:', error);
-                showMessage('حدث خطأ أثناء تحميل التوصيات', 'error');
+        const modalTitle = document.getElementById('viewRecommendationsModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = `التوصيات الطبية ${sejourDetails.patient_name ? 'لـ ' + sejourDetails.patient_name : ''}`;
+        }
+
+    } catch (error) {
+        console.error('Error loading recommendations:', error);
+        showMessage('حدث خطأ أثناء تحميل التوصيات', 'error');
+    }
+}
+
+async function viewPatientDetails(patientId) {
+    try {
+        if (!patientId) {
+            throw new Error('لم يتم تحديد المريض');
+        }
+
+        const response = await axios.get('/patient/detail', {
+            params: { id: patientId }
+        });
+        
+        const patientData = response.data;
+        console.log('Patient details response:', patientData);
+
+        const patient = Array.isArray(patientData) ? patientData[0] : patientData;
+        
+        if (!patient) {
+            throw new Error('لم يتم العثور على بيانات المريض');
+        }
+
+        const content = document.getElementById('viewPatientDetailsContent');
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="patient-details-container">
+                <div class="patient-details-section">
+                    <h6>المعلومات الشخصية</h6>
+                    <p><strong>الاسم الكامل:</strong> ${patient.full_name || `${patient.Nom || ''} ${patient.Prénom || ''}`.trim() || '-'}</p>
+                    <p><strong>رقم التعريف:</strong> ${patient.NIN || '-'}</p>
+                    <p><strong>رقم الهاتف:</strong> ${patient.telephone || patient.Tel || '-'}</p>
+                    <p><strong>الجنس:</strong> ${patient.sex || patient.Gender || '-'}</p>
+                    <p><strong>العمر:</strong> ${patient.age || '-'}</p>
+                    <p><strong>زمرة الدم:</strong> ${patient.groupage || patient.Blood_type || '-'}</p>
+                    <p><strong>العنوان:</strong> ${patient.adress || patient.address || '-'}</p>
+                </div>
+                <div class="patient-details-section">
+                    <h6>البيانات الحيوية الأخيرة</h6>
+                    <p><strong>درجة الحرارة:</strong> ${patient.Température || patient.temperature ? (patient.Température || patient.temperature) + ' °C' : '-'}</p>
+                    <p><strong>معدل ضربات القلب:</strong> ${patient.Fréquence_cardiaque || patient.heart_rate ? (patient.Fréquence_cardiaque || patient.heart_rate) + ' نبضة/دقيقة' : '-'}</p>
+                    <p><strong>ضغط الدم:</strong> ${patient.Tension_artérielle || patient.blood_pressure || '-'}</p>
+                    <p><strong>نسبة الأكسجين:</strong> ${patient.Saturation_oxygène || patient.oxygen_saturation ? (patient.Saturation_oxygène || patient.oxygen_saturation) + '%' : '-'}</p>
+                    <p><strong>مستوى الجلوكوز:</strong> ${patient.glycemie || patient.glucose_level ? (patient.glycemie || patient.glucose_level) + ' mg/dL' : '-'}</p>
+                    <p><strong>الوزن:</strong> ${patient.Poids || patient.weight ? (patient.Poids || patient.weight) + ' كجم' : '-'}</p>
+                    <p><strong>الطول:</strong> ${patient.Taille || patient.height ? (patient.Taille || patient.height) + ' سم' : '-'}</p>
+                </div>
+            </div>
+        `;
+        
+        const modalTitle = document.getElementById('viewPatientDetailsModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = `تفاصيل المريض: ${patient.full_name || `${patient.Nom || ''} ${patient.Prénom || ''}`.trim() || 'غير محدد'}`;
+        }
+
+    } catch (error) {
+        console.error('Error loading patient details:', error);
+        showMessage('حدث خطأ أثناء تحميل تفاصيل المريض', 'error');
+    }
+}
+
+// Search Function
+async function searchPatients(sectionId) {
+    try {
+        const searchTerm = sectionId === 'manage-patients' ? 
+            document.getElementById('searchBar')?.value?.trim()?.toLowerCase() : 
+            document.getElementById('searchBarAll')?.value?.trim()?.toLowerCase();
+        
+        if (!searchTerm) {
+            // If search is empty, reload all patients
+            if (sectionId === 'manage-patients') {
+                await loadManagePatients();
+            } else {
+                await loadAllPatients();
             }
+            return;
         }
 
+        const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!nurse || !nurse.id) {
+            throw new Error('خطأ في بيانات المستخدم');
+        }
 
-
-
-        async function viewPatientDetails(id) {
-            try {
-                const response = await axios('api/routes/patients.php');
-                const patients = response.data;
-                const patient = patients.find(p => p.id_patient === id);
-                if (patient) {
-                    const content = document.getElementById('viewPatientDetailsContent');
-                    content.innerHTML = `
-                        <div class="patient-details-container">
-                            <div class="patient-details-section">
-                                <h6>المعلومات الشخصية</h6>
-                                <p><strong>رقم التعريف:</strong> ${patient.NIN || '-'}</p>
-                                <p><strong>رقم الهاتف:</strong> ${patient.Tel || '-'}</p>
-                                <p><strong>الجنس:</strong> ${patient.Gender || '-'}</p>
-                                <p><strong>تاريخ الميلاد:</strong> ${patient.Birth_date || '-'}</p>
-                                <p><strong>زمرة الدم:</strong> ${patient.Blood_type || '-'}</p>
-                            </div>
-                            <div class="patient-details-section">
-                                <h6>البيانات الحيوية</h6>
-                                <p><strong>درجة الحرارة:</strong> ${patient.Température ? patient.Température + ' °C' : '-'}</p>
-                                <p><strong>معدل ضربات القلب:</strong> ${patient.Fréquence_cardiaque ? patient.Fréquence_cardiaque + ' نبضة/دقيقة' : '-'}</p>
-                                <p><strong>معدل التنفس:</strong> ${patient.respiratory_rate ? patient.respiratory_rate + ' نفس/دقيقة' : '-'}</p>
-                                <p><strong>ضغط الدم:</strong> ${patient.Tension_artérielle || '-'}</p>
-                                <p><strong>نسبة الأكسجين:</strong> ${patient.Saturation_oxygène ? patient.Saturation_oxygène + '%' : '-'}</p>
-                                <p><strong>الوزن:</strong> ${patient.Poids ? patient.Poids + ' كجم' : '-'}</p>
-                                <p><strong>الطول:</strong> ${patient.Taille ? patient.Taille + ' سم' : '-'}</p>
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('viewPatientDetailsModalLabel').textContent = `تفاصيل المريض: ${patient.Nom} ${patient.Prénom}`;
-                }
-            } catch (error) {
-                console.log(error);
-                showMessage('حدث خطأ أثناء تحميل تفاصيل المريض', 'error');
+        const response = await axios.get('/nurse/patients/search', {
+            params: { 
+                nurse_id: nurse.id,
+                search: searchTerm 
             }
+        });
+
+        const patients = Array.isArray(response.data) ? response.data : (response.data.data || []);
+        
+        if (sectionId === 'manage-patients') {
+            const activePatients = patients.filter(p => !p.Date_sortiee && !p.Date_sortie);
+            displayPatients(managePatientsTable, activePatients, true);
+        } else {
+            displayPatients(allPatientsTable, patients, false);
         }
 
-        function addRecommendation(containerId, medication = '', dosage = '') {
-            const recommendationsDiv = document.getElementById(containerId);
-            const item = document.createElement('div');
-            item.className = 'input-group mb-2 recommendation-item';
-            item.innerHTML = `
-                <input type="text" class="form-control" placeholder="الدواء" name="medication[]" value="${medication}">
-                <input type="text" class="form-control" placeholder="الجرعة" name="dosage[]" value="${dosage}">
-                <button type="button" class="btn btn-outline-danger" onclick="removeRecommendation(this)">حذف</button>
-            `;
-            recommendationsDiv.appendChild(item);
+    } catch (error) {
+        console.error('Error searching patients:', error);
+        const errorMessage = 'حدث خطأ أثناء البحث';
+        if (sectionId === 'manage-patients') {
+            showMessage(errorMessage, 'error');
+        } else {
+            showMessageAll(errorMessage, 'error');
         }
+    }
+}
 
-        function removeRecommendation(button) {
-            button.parentElement.remove();
-        }
+// Navigation Functions
+function logout() {
+    localStorage.removeItem('loggedInUser');
+    window.location.href = '/';
+}
 
-        function searchPatients(sectionId) {
-            const searchTerm = sectionId === 'manage-patients' ? document.getElementById('searchBar').value.trim().toLowerCase() : document.getElementById('searchBarAll').value.trim().toLowerCase();
-            fetch(`api/routes/patients.php?search=${encodeURIComponent(searchTerm)}`)
-                .then(response => response.json())
-                .then(patients => {
-                    if (sectionId === 'manage-patients') {
-                        const filteredPatients = patients.filter(p => !p.Date_sortie);
-                        displayPatients(managePatientsTable, filteredPatients, true);
-                    } else {
-                        displayPatients(allPatientsTable, patients, false);
-                    }
-                })
-                .catch(error => {
-                    showMessage('حدث خطأ أثناء البحث', 'error');
-                });
-        }
+function showSection(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    // Show selected section
+    const selectedSection = document.getElementById(sectionId);
+    if (selectedSection) {
+        selectedSection.classList.add('active');
+    }
+    
+    // Load data for the section
+    if (sectionId === 'manage-patients') {
+        loadManagePatients();
+    } else if (sectionId === 'all-patients') {
+        loadAllPatients();
+    }
+}
 
-        function logout() {
-            localStorage.removeItem('loggedInUser');
-            window.location.href = '/';
-        }
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar toggle
+    if (toggleSidebarBtn) {
         toggleSidebarBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('active');
-            content.classList.toggle('sidebar-active');
+            sidebar?.classList.toggle('active');
+            content?.classList.toggle('sidebar-active');
         });
+    }
 
-        addButton.addEventListener('click', () => {
-            if (!document.getElementById('addRoom').value.trim()) {
-                showMessage('يرجى اختيار غرفة قبل إضافة المريض', 'error');
-                return;
-            }
-            addPatient();
-        });
-
+    // Update button
+    if (updateButton) {
         updateButton.addEventListener('click', saveUpdatedPatient);
+    }
 
-        document.getElementById('searchBar').addEventListener('input', () => searchPatients('manage-patients'));
-        document.getElementById('searchBarAll').addEventListener('input', () => searchPatients('all-patients'));
+    // Search bars
+    const searchBar = document.getElementById('searchBar');
+    if (searchBar) {
+        searchBar.addEventListener('input', () => searchPatients('manage-patients'));
+    }
 
-        selectRoomModalAdd.addEventListener('show.bs.modal', () => loadAvailableRooms(true));
+    const searchBarAll = document.getElementById('searchBarAll');
+    if (searchBarAll) {
+        searchBarAll.addEventListener('input', () => searchPatients('all-patients'));
+    }
 
+    // Initialize page
+    loadManagePatients();
+    loadAllPatients();
+});
 
-        function showSection(sectionId) {
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
-            const selected = document.getElementById(sectionId);
-            if (selected) selected.classList.add('active');
-        }
+// Handle page visibility changes
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        // Refresh data when page becomes visible
+        loadManagePatients();
+        loadAllPatients();
+    }
+});
+</script>
 
-        window.onload = () => {
-            //loadManagePatients();
-            loadAllPatients();
-        };
-
-    </script>
 </body>
 
 </html>

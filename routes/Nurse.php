@@ -18,7 +18,6 @@ $parsed_url = parse_url($url, PHP_URL_PATH);
 $input = json_decode(file_get_contents("php://input"), true);
 
 if ($method === 'GET') {
-    // GET /nurse/patients/search?fullname=...
     if (strpos($parsed_url, '/nurse/patients/search') !== false && isset($_GET['fullname'])) {
         $fullname = $_GET['fullname'];
         $result = $nurse->searchPatient($fullname);
@@ -32,20 +31,36 @@ if ($method === 'GET') {
         }
         exit;
     }
-
-    // GET /nurse/patients
-    if (strpos($parsed_url, '/nurse/patients') !== false) {
-        ob_start(); 
-        $nurse->getAllPatients();
-        $output = ob_get_clean(); 
-        echo $output;
+    else if (strpos($parsed_url, '/nurse/patients') !== false) {
+        try {
+            if (!isset($_GET['nurse_id']) || empty($_GET['nurse_id'])) {
+                http_response_code(400);
+                echo json_encode(["error" => "Nurse ID is required"]);
+                exit;
+            }
+                         
+            $nurse->id_user = $_GET['nurse_id'];
+            $result = $nurse->getAllPatients();
+                         
+            if ($result !== false) {
+                echo json_encode($result); 
+            } else {
+                http_response_code(500);
+                echo json_encode(["error" => "Failed to retrieve patients"]);
+            }
+                     
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["error" => "Internal server error: " . $e->getMessage()]);
+        }
         exit;
     }
 
-    http_response_code(404);
-    echo json_encode(["message" => "Invalid endpoint"]);
-    exit;
-
+    else{
+        http_response_code(404);
+        echo json_encode(["message" => "Invalid endpoint"]);
+        exit;
+    }
 } else if ($method === "PUT") {
     if (strpos($parsed_url, '/suivis') !== false) {
         if (!isset($input['id_suivi'])) {
@@ -71,7 +86,6 @@ if ($method === 'GET') {
     exit;
 
 } else if ($method === "OPTIONS") {
-    // For CORS preflight requests
     http_response_code(200);
     exit;
 

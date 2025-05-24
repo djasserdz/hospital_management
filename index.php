@@ -22,9 +22,24 @@ function routing($method, $url,$queryParams){
             case '/patients':
                 require './routes/Patient.php';
             break;
+            case '/patient/detail':
+                require "./routes/Patient.php";
+            break;
+            case '/prescriptions':
+                require './routes/Prescription.php';
+            break;
+            case '/prescription':
+                require './routes/Prescription.php';
+            break;
             case "/room":
                 require "./routes/Chambre.php";
             exit;
+            case "/nurse/room":
+                require "./routes/Chambre.php";
+            exit;
+            case '/nurse/patients':
+                require "./routes/Nurse.php";
+            break;
             case '/patient':
                 if (isset($queryParams['id'])) {
                     $_GET['id'] = $queryParams['id']; 
@@ -47,7 +62,10 @@ function routing($method, $url,$queryParams){
             case '/patient':
                 require './routes/Patient.php';
             break;
-                default:
+            case '/prescription':
+                require './routes/Prescription.php';
+            break;
+            default:
                 http_response_code(404);
                 echo "404 - Not found (POST)";
             break;
@@ -55,8 +73,11 @@ function routing($method, $url,$queryParams){
     }
     else if($method == "PUT"){
         switch($url){
-            case '/patient';
-            require './routes/Patient.php';
+            case '/patient':
+                require './routes/Patient.php';
+            break;
+            case '/prescription':
+                require './routes/Prescription.php';
             break;
             default:
                 http_response_code(404);
@@ -65,6 +86,9 @@ function routing($method, $url,$queryParams){
     }
     else if($method == "DELETE"){
         switch($url){
+            case '/prescription':
+                require './routes/Prescription.php';
+            break;
             default:
                 http_response_code(404);
                 echo "404 - Not found (DELETE)";

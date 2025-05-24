@@ -24,4 +24,17 @@ class Chambre {
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function getrooms($id){
+        $sql="SELECT id_service from Users WHERE id=:id";
+        $stmt=$this->conn->prepare($sql);
+        $stmt->bindParam(":id",$id);
+        $stmt->execute();
+
+        $result=$stmt->fetch();
+
+        $this->id_service=$result['id_service'];
+
+        return $this->getAvailableByService();
+    }
 }

@@ -16,22 +16,24 @@ class Nurse {
 
    
 
-    // Get all patients in nurse's service
     public function getAllPatients() {
-        $query = "SELECT Patients.* FROM Patients
+        $find_service="SELECT id_service FROM Users WHERE id=:id ";
+        $stmt1=$this->conn->prepare($find_service);
+        $stmt1->bindParam(":id",$this->id_user);
+
+        $id_service=$stmt1->execute();
+
+        $query = "SELECT Patients.*,Sejour.*,Chambres.*,Services.* FROM Patients
                   JOIN Sejour ON Sejour.id_patient = Patients.id_patient
                   JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
                   JOIN Services ON Services.id_service = Chambres.id_service
-                  WHERE Services.id_service = :id_service";
+                  WHERE Services.id_service = $id_service";
 
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id_service', $this->id_service);
+        //$stmt->bindParam(':id_service', $this->id_service);
         $stmt->execute();
 
-        $result = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $result[] = $row;
-        }
+        $result=$stmt->fetchAll();
 
         return $result;
     }

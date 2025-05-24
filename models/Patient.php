@@ -111,12 +111,12 @@ class Patient {
     public function update($id_chambre = null, $admission_date = null) {
         try {
             $this->conn->beginTransaction();
-
-            $sql = "UPDATE " . $this->table . " 
-                    SET full_name = :full_name, NIN = :NIN, age = :age, sex = :sex, 
-                        adress = :adress, telephone = :telephone, groupage = :groupage 
+            
+            $sql = "UPDATE " . $this->table . "
+                    SET full_name = :full_name, NIN = :NIN, age = :age, sex = :sex,
+                        adress = :adress, telephone = :telephone, groupage = :groupage
                     WHERE id_patient = :id";
-
+            
             $stmt = $this->conn->prepare($sql);
             $stmt->bindParam(':full_name', $this->full_name);
             $stmt->bindParam(':NIN', $this->NIN);
@@ -126,52 +126,83 @@ class Patient {
             $stmt->bindParam(':telephone', $this->telephone);
             $stmt->bindParam(':groupage', $this->groupage);
             $stmt->bindParam(':id', $this->id_patient);
-
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to update patient information");
-            }
-
-            if ($id_chambre !== null || $admission_date !== null) {
-                $currentSejour = $this->getCurrentSejour();
-
-                if ($id_chambre !== null && $currentSejour && $currentSejour['id_chambre'] != $id_chambre) {
-                    if (!$this->isRoomAvailable($id_chambre)) {
-                        throw new Exception("Room {$id_chambre} is not available");
+            
+            $stmt->execute();
+            
+            if (!empty($id_chambre)) {
+                $sql_current = "SELECT id_sejour, id_chambre FROM Sejour 
+                               WHERE id_patient = :id_patient AND Date_sortiee IS NULL
+                               ORDER BY Date_entree DESC LIMIT 1";
+                
+                $stmt_current = $this->conn->prepare($sql_current);
+                $stmt_current->bindParam(':id_patient', $this->id_patient);
+                $stmt_current->execute();
+                $current_sejour = $stmt_current->fetch(PDO::FETCH_ASSOC);
+                
+                if ($current_sejour) {
+                    $old_chambre_id = $current_sejour['id_chambre'];
+                    $sejour_id = $current_sejour['id_sejour'];
+                    
+                    if (!empty($old_chambre_id)) {
+                        $sql_old_room = "UPDATE Chambres SET Available = true WHERE id_chambre = :old_chambre_id";
+                        $stmt_old_room = $this->conn->prepare($sql_old_room);
+                        $stmt_old_room->bindParam(':old_chambre_id', $old_chambre_id);
+                        $stmt_old_room->execute();
                     }
-                    $this->freeRoom($currentSejour['id_chambre']);
-                }
-
-                if ($currentSejour) {
-                    $sqlSejour = "UPDATE Sejour 
-                                  SET id_chambre = :id_chambre,
-                                      Date_entree = :Date_entree
-                                  WHERE id_patient = :id_patient AND Date_sortie IS NULL";
+                    
+                    $sql_check = "SELECT Available FROM Chambres WHERE id_chambre = :new_chambre_id";
+                    $stmt_check = $this->conn->prepare($sql_check);
+                    $stmt_check->bindParam(':new_chambre_id', $id_chambre);
+                    $stmt_check->execute();
+                    $room_status = $stmt_check->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$room_status || !$room_status['Available']) {
+                        throw new Exception("Room is not available");
+                    }
+                    
+                    $sql_sejour = "UPDATE Sejour SET id_chambre = :new_chambre_id WHERE id_sejour = :sejour_id";
+                    $stmt_sejour = $this->conn->prepare($sql_sejour);
+                    $stmt_sejour->bindParam(':new_chambre_id', $id_chambre);
+                    $stmt_sejour->bindParam(':sejour_id', $sejour_id);
+                    $stmt_sejour->execute();
+                    
+                    $sql_new_room = "UPDATE Chambres SET Available = false WHERE id_chambre = :new_chambre_id";
+                    $stmt_new_room = $this->conn->prepare($sql_new_room);
+                    $stmt_new_room->bindParam(':new_chambre_id', $id_chambre);
+                    $stmt_new_room->execute();
                 } else {
-                    $sqlSejour = "INSERT INTO Sejour (id_patient, id_chambre, Date_entree)
-                                  VALUES (:id_patient, :id_chambre, :Date_entree)";
-                }
-
-                $stmtSejour = $this->conn->prepare($sqlSejour);
-                $stmtSejour->bindParam(':id_patient', $this->id_patient);
-
-                $bindRoom = $id_chambre ?? ($currentSejour['id_chambre'] ?? null);
-                $stmtSejour->bindParam(':id_chambre', $bindRoom);
-
-                $bindDate = $admission_date ?? ($currentSejour['Date_entree'] ?? date('Y-m-d'));
-                $stmtSejour->bindParam(':Date_entree', $bindDate);
-
-                if (!$stmtSejour->execute()) {
-                    throw new Exception("Failed to update sejour record");
-                }
-
-                if ($id_chambre !== null) {
-                    $this->occupyRoom($id_chambre);
+                    if (!empty($admission_date)) {
+                        $sql_check = "SELECT Available FROM Chambres WHERE id_chambre = :new_chambre_id";
+                        $stmt_check = $this->conn->prepare($sql_check);
+                        $stmt_check->bindParam(':new_chambre_id', $id_chambre);
+                        $stmt_check->execute();
+                        $room_status = $stmt_check->fetch(PDO::FETCH_ASSOC);
+                        
+                        if (!$room_status || !$room_status['Available']) {
+                            throw new Exception("Room is not available");
+                        }
+                        
+                        $sql_new_sejour = "INSERT INTO Sejour (id_patient, id_chambre, Date_entree) 
+                                          VALUES (:id_patient, :id_chambre, :admission_date)";
+                        $stmt_new_sejour = $this->conn->prepare($sql_new_sejour);
+                        $stmt_new_sejour->bindParam(':id_patient', $this->id_patient);
+                        $stmt_new_sejour->bindParam(':id_chambre', $id_chambre);
+                        $stmt_new_sejour->bindParam(':admission_date', $admission_date);
+                        $stmt_new_sejour->execute();
+                        
+                        $sql_new_room = "UPDATE Chambres SET Available = false WHERE id_chambre = :new_chambre_id";
+                        $stmt_new_room = $this->conn->prepare($sql_new_room);
+                        $stmt_new_room->bindParam(':new_chambre_id', $id_chambre);
+                        $stmt_new_room->execute();
+                    } else {
+                        throw new Exception("No active admission found and no admission date provided");
+                    }
                 }
             }
-
+            
             $this->conn->commit();
             return true;
-
+            
         } catch (Exception $e) {
             $this->conn->rollBack();
             error_log("Error in Patient::update(): " . $e->getMessage());
@@ -243,6 +274,22 @@ class Patient {
         $stmt->bindParam(':id_chambre', $id_chambre);
         return $stmt->execute();
     }
+
+    public function getDetails(){
+        $sql2 = "SELECT Patients.*, Suivi.* 
+        FROM Patients 
+        JOIN Sejour ON Sejour.id_patient = Patients.id_patient 
+        JOIN Suivi ON Suivi.id_sejour = Sejour.id_sejour
+        WHERE Patients.id_patient = :id_patient";
+
+        $stmt=$this->conn->prepare($sql2);
+        $stmt->bindParam(":id_patient",$this->id_patient);
+        $stmt->execute();
+
+        $result=$stmt->fetch();
+
+        return $result;
+   }
 }
 
 ?>
