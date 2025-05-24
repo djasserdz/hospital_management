@@ -33,12 +33,12 @@ class Prescription {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function readOne($id_prescription) {
-        $sql = "SELECT * FROM " . $this->table . " WHERE id_prescription = :id_prescription";
+    public function readOne($id_sejour) {
+        $sql = "SELECT Prescription.* FROM Sejour  JOIN Prescription ON Prescription.id_sejour = Sejour.id_sejour  WHERE Sejour.id_sejour = :id_sejour";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_prescription', $id_prescription);
+        $stmt->bindParam(':id_sejour', $id_sejour);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function update($input) {

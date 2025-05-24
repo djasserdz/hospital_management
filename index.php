@@ -40,6 +40,9 @@ function routing($method, $url,$queryParams){
             case '/nurse/patients':
                 require "./routes/Nurse.php";
             break;
+            case '/nurse/patient/search':
+                require './routes/Nurse.php';
+            break;
             case '/patient':
                 if (isset($queryParams['id'])) {
                     $_GET['id'] = $queryParams['id']; 
@@ -62,6 +65,8 @@ function routing($method, $url,$queryParams){
             case '/patient':
                 require './routes/Patient.php';
             break;
+            case '/suivis':
+                require "./routes/Suivi.php";
             case '/prescription':
                 require './routes/Prescription.php';
             break;

@@ -40,18 +40,22 @@ class Nurse {
 
     
     public function searchPatient($fullname) {
-        $query = "SELECT Patients.*, Chambres.nom_chambre, Services.nom_service FROM Patients 
-                  JOIN Sejour ON Sejour.id_patient = Patients.id_patient
-                  JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
-                  JOIN Services ON Services.id_service = Chambres.id_service
-                  WHERE Patients.full_name = :fullname
-                  LIMIT 1";
+        $query = "SELECT Patients.*, Chambres.Numero_cr, Services.nom_service 
+          FROM Patients 
+          JOIN Sejour ON Sejour.id_patient = Patients.id_patient
+          JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
+          JOIN Services ON Services.id_service = Chambres.id_service
+          WHERE Patients.full_name LIKE :fullname
+          LIMIT 1";
 
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':fullname', $fullname);
-        $stmt->execute();
+$stmt = $this->conn->prepare($query);
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+$fullname = '%' . $fullname . '%';
+
+$stmt->bindParam(':fullname', $fullname, PDO::PARAM_STR);
+$stmt->execute();
+
+return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     public function updateSuivi($data) {
     $query = "UPDATE Suivi SET 
@@ -119,8 +123,6 @@ public function createSuivi($data) {
     $stmt->bindParam(':Date_observation', $data['Date_observation']);
 
     return $stmt->execute();
-}
-
-
+              } 
 }
 ?>

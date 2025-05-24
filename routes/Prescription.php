@@ -18,7 +18,7 @@ $input = json_decode(file_get_contents("php://input"), true);
 
 if ($method === "GET") {
     if ($parsed_url === '/prescription') {
-        if (empty($_GET['id_sejour'])) {
+        if (empty($_GET['id_sejour'])){
             http_response_code(400);
             echo json_encode(["message" => "Missing id_sejour parameter"]);
             exit;
@@ -100,7 +100,8 @@ if ($method === "GET") {
             echo json_encode(["message" => "Failed to delete prescription"]);
         }
         exit;
-    } else {
+    }
+     else {
         http_response_code(400);
         echo json_encode(["message" => "Missing id for delete"]);
         exit;

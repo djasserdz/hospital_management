@@ -615,6 +615,8 @@ async function loadAvailableRooms(nurse_id) {
             params: { nurse_id: nurse_id }
         });
 
+        console.log(response);
+
         const rooms = response.data;
         const container = document.getElementById('availableRoomsAdd');
         if (!container) return;
@@ -759,7 +761,7 @@ function displayPatients(table, patientsList, isManageSection) {
                 <td>${isActive}</td>
                 <td class="notes-cell">
                     <i class="bi bi-eye notes-icon"
-                       onclick="viewRecommendations(${sejourId})"
+                       onclick="viewRecommendations(${patientId})"
                        title="عرض التوصيات"
                        data-bs-toggle="modal"
                        data-bs-target="#viewRecommendationsModal"></i>
@@ -881,10 +883,11 @@ async function saveUpdatedPatient() {
         // Update prescriptions
         if (prescriptions.length > 0) {
             try {
-                // Delete existing prescriptions
-                const existingPrescriptionsResponse = await axios.get('/prescriptions', {
-                    params: { id_sejour: selectedSejourId }
+                // Delete existing prescriptions for this stay (if your API requires individual deletes)
+                const existingPrescriptionsResponse = await axios.delete('/prescription', {
+                    params: { id: selectedSejourId }
                 });
+                console.log('Deleted existing prescriptions:', existingPrescriptionsResponse);
 
                 if (existingPrescriptionsResponse.status === 200 && existingPrescriptionsResponse.data.prescriptions) {
                     const existingPrescriptions = existingPrescriptionsResponse.data.prescriptions;
@@ -898,13 +901,14 @@ async function saveUpdatedPatient() {
 
                 // Add new prescriptions
                 for (const prescription of prescriptions) {
-                    await axios.post('/prescription', {
+                    const response = await axios.post('/prescription', {
                         id_sejour: selectedSejourId,
                         Medicament: prescription.medicament || '',
                         Dosage: prescription.dosage || '',
                         frequence: prescription.frequency || '',
                         instructions: prescription.instruction || ''
                     });
+                    console.log('Added prescription:', response);
                 }
             } catch (prescriptionError) {
                 console.error('Prescription update error:', prescriptionError);
@@ -914,7 +918,7 @@ async function saveUpdatedPatient() {
 
         // Create suivi record
         const suiviData = {
-            Date_observation: dateObservation || new Date().toISOString().split('T')[0],
+            Date_observation: dateObservation || new Date().toISOString().slice(0, 19).replace('T', ' '),
             id_sejour: selectedSejourId,
             id_nurse: nurse.id,
             etat_santee: status,
@@ -933,7 +937,7 @@ async function saveUpdatedPatient() {
             await loadManagePatients();
             await loadAllPatients();
             
-            // Close modal
+            // Close modal (assuming Bootstrap modal)
             const modal = bootstrap.Modal.getInstance(updatePatientModal);
             if (modal) modal.hide();
             
@@ -947,6 +951,7 @@ async function saveUpdatedPatient() {
         showMessage(error.message || 'حدث خطأ أثناء التحديث', 'error');
     }
 }
+
 
 async function togglePatientStatus(sejourId) {
     if (!sejourId) {
@@ -979,27 +984,37 @@ async function viewRecommendations(sejourId) {
             throw new Error('لم يتم تحديد الإقامة');
         }
 
-        // Get prescriptions for this sejour
+        console.log("sejourId:", sejourId);
+
+        // Fetch prescriptions
         const prescriptionsResponse = await axios.get('/prescription', {
             params: { id_sejour: sejourId }
         });
+        console.log("prescriptionsResponse.data:", prescriptionsResponse.data);
 
-        const prescriptions = prescriptionsResponse.data;
-        console.log(prescriptionsResponse);
-        
-        // Get sejour details if available
+        const prescriptions = Array.isArray(prescriptionsResponse.data)
+            ? prescriptionsResponse.data
+            : (prescriptionsResponse.data ? [prescriptionsResponse.data] : []);
+
+        console.log("prescriptions array:", prescriptions);
+
+        // Fetch sejour details
         let sejourDetails = {};
         try {
             const sejourResponse = await axios.get('/patient/detail', {
                 params: { id: sejourId }
             });
+            console.log("sejourResponse.data:", sejourResponse.data);
             sejourDetails = sejourResponse.data || {};
         } catch (sejourError) {
             console.warn('Could not load sejour details:', sejourError);
         }
 
         const content = document.getElementById('viewRecommendationsContent');
-        if (!content) return;
+        if (!content) {
+            console.error('Element with id "viewRecommendationsContent" not found.');
+            return;
+        }
 
         content.innerHTML = `
             <div class="update-info">
@@ -1012,10 +1027,10 @@ async function viewRecommendations(sejourId) {
                 ${prescriptions.length > 0
                     ? prescriptions.map(p => `
                         <div class="prescription-item mb-2 p-2 border rounded">
-                            <strong>الدواء:</strong> ${p.Medicament || p.medicament || '-'}<br>
-                            <strong>الجرعة:</strong> ${p.Dosage || p.dosage || '-'}<br>
-                            <strong>التردد:</strong> ${p.frequence || p.frequency || '-'}<br>
-                            <strong>التعليمات:</strong> ${p.instructions || p.instruction || '-'}
+                            <strong>الدواء:</strong> ${p.Medicament || '-'}<br>
+                            <strong>الجرعة:</strong> ${p.Dosage || '-'}<br>
+                            <strong>التردد:</strong> ${p.frequence || '-'}<br>
+                            <strong>التعليمات:</strong> ${p.instructions || '-'}
                         </div>
                     `).join('')
                     : '<p>لا توجد أدوية محددة</p>'
@@ -1038,6 +1053,7 @@ async function viewRecommendations(sejourId) {
     }
 }
 
+
 async function viewPatientDetails(patientId) {
     try {
         if (!patientId) {
@@ -1049,7 +1065,7 @@ async function viewPatientDetails(patientId) {
         });
         
         const patientData = response.data;
-        console.log('Patient details response:', patientData);
+        console.log('Patient details:', patientData);
 
         const patient = Array.isArray(patientData) ? patientData[0] : patientData;
         
@@ -1075,9 +1091,9 @@ async function viewPatientDetails(patientId) {
                 <div class="patient-details-section">
                     <h6>البيانات الحيوية الأخيرة</h6>
                     <p><strong>درجة الحرارة:</strong> ${patient.Température || patient.temperature ? (patient.Température || patient.temperature) + ' °C' : '-'}</p>
-                    <p><strong>معدل ضربات القلب:</strong> ${patient.Fréquence_cardiaque || patient.heart_rate ? (patient.Fréquence_cardiaque || patient.heart_rate) + ' نبضة/دقيقة' : '-'}</p>
-                    <p><strong>ضغط الدم:</strong> ${patient.Tension_artérielle || patient.blood_pressure || '-'}</p>
-                    <p><strong>نسبة الأكسجين:</strong> ${patient.Saturation_oxygène || patient.oxygen_saturation ? (patient.Saturation_oxygène || patient.oxygen_saturation) + '%' : '-'}</p>
+                    <p><strong>معدل ضربات القلب:</strong> ${patient.frequence_quardiaque || patient.heart_rate ? (patient.frequence_quardiaque || patient.heart_rate) + ' نبضة/دقيقة' : '-'}</p>
+                    <p><strong>ضغط الدم:</strong> ${patient.tension || patient.blood_pressure || '-'}</p>
+                    <p><strong>نسبة الأكسجين:</strong> ${patient.saturation_oxygene || patient.oxygen_saturation ? (patient.saturation_oxygene || patient.oxygen_saturation) + '%' : '-'}</p>
                     <p><strong>مستوى الجلوكوز:</strong> ${patient.glycemie || patient.glucose_level ? (patient.glycemie || patient.glucose_level) + ' mg/dL' : '-'}</p>
                     <p><strong>الوزن:</strong> ${patient.Poids || patient.weight ? (patient.Poids || patient.weight) + ' كجم' : '-'}</p>
                     <p><strong>الطول:</strong> ${patient.Taille || patient.height ? (patient.Taille || patient.height) + ' سم' : '-'}</p>
@@ -1096,54 +1112,69 @@ async function viewPatientDetails(patientId) {
     }
 }
 
-// Search Function
+let searchTimeout; // Ensure this is declared in a shared/global scope
+
 async function searchPatients(sectionId) {
-    try {
-        const searchTerm = sectionId === 'manage-patients' ? 
-            document.getElementById('searchBar')?.value?.trim()?.toLowerCase() : 
-            document.getElementById('searchBarAll')?.value?.trim()?.toLowerCase();
-        
-        if (!searchTerm) {
-            // If search is empty, reload all patients
+    clearTimeout(searchTimeout); // Prevent firing multiple times
+
+    searchTimeout = setTimeout(async () => {
+        try {
+            const searchTerm = sectionId === 'manage-patients' ? 
+                document.getElementById('searchBar')?.value?.trim()?.toLowerCase() : 
+                document.getElementById('searchBarAll')?.value?.trim()?.toLowerCase();
+            
+            if (!searchTerm) {
+                // Reload all patients if search is cleared
+                if (sectionId === 'manage-patients') {
+                    await loadManagePatients();
+                } else {
+                    await loadAllPatients();
+                }
+                return;
+            }
+
+            const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+            if (!nurse?.id) {
+                throw new Error('خطأ في بيانات المستخدم');
+            }
+
+            const nurse_id = nurse.id;
+
+            const response = await axios.get("/nurse/patient/search", {
+                params: {
+                    nurse_id: nurse_id,
+                    search: searchTerm,
+                }
+            });
+
+            const patient = response.data;
+
+            // Ensure valid object is returned
+            if (!patient || typeof patient !== 'object' || Array.isArray(patient)) {
+                throw new Error('لم يتم العثور على المريض');
+            }
+
+            const patients = [patient]; // Wrap in array for compatibility
+
             if (sectionId === 'manage-patients') {
-                await loadManagePatients();
+                const activePatients = patients.filter(p => !p.Date_sortiee && !p.Date_sortie);
+                displayPatients(managePatientsTable, activePatients, true);
             } else {
-                await loadAllPatients();
+                displayPatients(allPatientsTable, patients, false);
             }
-            return;
-        }
 
-        const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
-        if (!nurse || !nurse.id) {
-            throw new Error('خطأ في بيانات المستخدم');
-        }
-
-        const response = await axios.get('/nurse/patients/search', {
-            params: { 
-                nurse_id: nurse.id,
-                search: searchTerm 
+        } catch (error) {
+            console.error('Error searching patients:', error);
+            const errorMessage = 'حدث خطأ أثناء البحث';
+            if (sectionId === 'manage-patients') {
+                showMessage(errorMessage, 'error');
+            } else {
+                showMessageAll(errorMessage, 'error');
             }
-        });
-
-        const patients = Array.isArray(response.data) ? response.data : (response.data.data || []);
-        
-        if (sectionId === 'manage-patients') {
-            const activePatients = patients.filter(p => !p.Date_sortiee && !p.Date_sortie);
-            displayPatients(managePatientsTable, activePatients, true);
-        } else {
-            displayPatients(allPatientsTable, patients, false);
         }
-
-    } catch (error) {
-        console.error('Error searching patients:', error);
-        const errorMessage = 'حدث خطأ أثناء البحث';
-        if (sectionId === 'manage-patients') {
-            showMessage(errorMessage, 'error');
-        } else {
-            showMessageAll(errorMessage, 'error');
-        }
-    }
+    }, 1000); // 1-second delay after user stops typing
 }
+
 
 // Navigation Functions
 function logout() {

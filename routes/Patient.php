@@ -18,8 +18,20 @@ $parsed_url = parse_url($url, PHP_URL_PATH);
 $input = json_decode(file_get_contents("php://input"), true);
 
 if ($method === "GET") {
-
-    if (strpos($parsed_url, '/patients') !== false) {
+    if($parsed_url === '/patient/detail'){
+        if(empty($_GET['id'])){
+            http_response_code(400);
+            echo json_encode("missing Patient id");
+            exit;
+        }
+        $patient=new Patient($db);
+        $patient->id_patient=$_GET['id'];
+        $result=$patient->getDetails();
+        http_response_code(200);
+        echo json_encode($result);
+        exit;
+    }
+    else if (strpos($parsed_url, '/patients') !== false) {
         $patients = new Patient($db);
         $data = $patients->readAll(); // get all patients
 
@@ -45,19 +57,7 @@ if ($method === "GET") {
         }
         exit;
     }
-    else if(strpos($parsed_url,'/patient/detail') !== false){
-        if(empty($_GET['id'])){
-            http_response_code(400);
-            echo json_encode("missing Patient id");
-            exit;
-        }
-        $patient=new Patient($db);
-        $patient->id_patient=$_GET['id'];
-        $result=$patient->getDetails();
-        http_response_code(200);
-        echo json_encode($result);
-        exit;
-    }
+    
      else {
         http_response_code(404);
         echo json_encode(["message" => "Endpoint does not exist"]);
@@ -81,6 +81,7 @@ if ($method === "GET") {
         $patient->groupage = $input['groupage'] ?? null;
         $patient->created_at=$input['admisiion_date'] ?? null;
 
+        
         $patient->create($input['id_chambre'],$input['admission_date']);
         http_response_code(200);
         echo json_encode(["message" => "New Patient Created"]);

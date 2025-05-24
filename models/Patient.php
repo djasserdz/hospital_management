@@ -23,8 +23,8 @@ class Patient {
             $this->conn->beginTransaction();
 
             $sql1 = "INSERT INTO " . $this->table . " 
-                    (full_name, NIN, age, sex, adress, telephone, groupage, created_at) 
-                    VALUES (:full_name, :NIN, :age, :sex, :adress, :telephone, :groupage, :created_at)";
+                    (full_name, NIN, age, sex, adress, telephone, groupage) 
+                    VALUES (:full_name, :NIN, :age, :sex, :adress, :telephone, :groupage)";
             
             $stmt1 = $this->conn->prepare($sql1);
             $stmt1->bindParam(':full_name', $this->full_name);
@@ -34,8 +34,6 @@ class Patient {
             $stmt1->bindParam(':adress', $this->adress);
             $stmt1->bindParam(':telephone', $this->telephone);
             $stmt1->bindParam(':groupage', $this->groupage);
-            $createdAt = $this->created_at ?? date('Y-m-d H:i:s');
-            $stmt1->bindParam(':created_at', $createdAt);
 
             if (!$stmt1->execute()) {
                 throw new Exception("Failed to insert patient data");
@@ -275,21 +273,23 @@ class Patient {
         return $stmt->execute();
     }
 
-    public function getDetails(){
-        $sql2 = "SELECT Patients.*, Suivi.* 
-        FROM Patients 
-        JOIN Sejour ON Sejour.id_patient = Patients.id_patient 
-        JOIN Suivi ON Suivi.id_sejour = Sejour.id_sejour
-        WHERE Patients.id_patient = :id_patient";
-
-        $stmt=$this->conn->prepare($sql2);
-        $stmt->bindParam(":id_patient",$this->id_patient);
+    public function getDetails() {
+               $query = "SELECT 
+                    Patients.*, 
+                    Suivi.*
+                  FROM Patients 
+                  JOIN Sejour ON Sejour.id_patient = Patients.id_patient 
+                  JOIN Suivi ON Suivi.id_sejour = Sejour.id_sejour
+                  WHERE Patients.id_patient = :id_patient";
+    
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":id_patient", $this->id_patient);
         $stmt->execute();
-
-        $result=$stmt->fetch();
-
-        return $result;
-   }
+    
+        return $stmt->fetch(PDO::FETCH_ASSOC); // if expecting single result
+        // OR use fetchAll() if expecting multiple observations
+    }
+    
 }
 
 ?>
