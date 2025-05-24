@@ -80,6 +80,47 @@ class Nurse {
 
     return $stmt->execute();
 }
+public function createSuivi($data) {
+    $query = "INSERT INTO Suivi (
+                id_patient, 
+                id_nurse, 
+                etat_santee, 
+                tension, 
+                temperature, 
+                frequence_quardiaque, 
+                saturation_oxygene, 
+                glycemie, 
+                Remarque, 
+                Date_observation
+              ) VALUES (
+                :id_patient, 
+                :id_nurse, 
+                :etat_santee, 
+                :tension, 
+                :temperature, 
+                :frequence_quardiaque, 
+                :saturation_oxygene, 
+                :glycemie, 
+                :Remarque, 
+                :Date_observation
+              )";
+
+    $stmt = $this->conn->prepare($query);
+
+    $stmt->bindParam(':id_patient', $data['id_patient']);
+    $stmt->bindParam(':id_nurse', $data['id_nurse']);
+    $stmt->bindParam(':etat_santee', $data['etat_santee']);
+    $stmt->bindParam(':tension', $data['tension']);
+    $stmt->bindParam(':temperature', $data['temperature']);
+    $stmt->bindParam(':frequence_quardiaque', $data['frequence_quardiaque']);
+    $stmt->bindParam(':saturation_oxygene', $data['saturation_oxygene']);
+    $stmt->bindParam(':glycemie', $data['glycemie']);
+    $stmt->bindParam(':Remarque', $data['Remarque']);
+    $stmt->bindParam(':Date_observation', $data['Date_observation']);
+
+    return $stmt->execute();
+}
+
 
 }
 ?>
