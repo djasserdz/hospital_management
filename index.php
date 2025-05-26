@@ -52,6 +52,9 @@ function routing($method, $url,$queryParams){
                     echo json_encode(["message" => "Missing 'id' parameter."]);
                 }
             break;
+            case '/admin/patients/all':
+                require './routes/Admin.php';
+            break;
             default:
                 http_response_code(404);
                 echo "404 - Page not found";
@@ -83,6 +86,12 @@ function routing($method, $url,$queryParams){
             break;
             case '/prescription':
                 require './routes/Prescription.php';
+            break;
+            case '/sejour/room':
+                require './routes/Sejour.php';
+            break;
+            case '/sejour/status':
+                require './routes/Sejour.php';
             break;
             default:
                 http_response_code(404);

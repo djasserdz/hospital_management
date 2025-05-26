@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
 
+<html dir="rtl" lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واجهة الممرض</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
-    <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>واجهة الممرض</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<style>
         body {
             font-family: 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
             background-color: #f8f9fa;
@@ -320,224 +319,374 @@
             }
         }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
 </head>
-
 <body>
-    <button id="toggleSidebar" class="btn btn-primary"
-        style="position: fixed; top: 10px; right: 10px; z-index: 1100;">☰</button>
-    <div class="sidebar">
-        <h2>واجهة الممرض</h2>
-        <a href="#" onclick="showSection('manage-patients')"><i class="bi bi-person-check"></i> <span>إدارة
+<button class="btn btn-primary" id="toggleSidebar" style="position: fixed; top: 10px; right: 10px; z-index: 1100;">☰</button>
+<div class="sidebar">
+<h2>واجهة الممرض</h2><a href="#" onclick="document.getElementById('addButton').click()"><i class="bi bi-person-plus"></i> <span>إضافة مريض</span></a>
+<a href="#" onclick="showSection('manage-patients')"><i class="bi bi-person-check"></i> <span>إدارة
                 المرضى</span></a>
-        <a href="#" onclick="showSection('all-patients')"><i class="bi bi-people"></i> <span>جميع المرضى</span></a>
-        <a href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> <span>تسجيل الخروج</span></a>
-    </div>
-    <div class="content">
-        <h1 class="text-center mb-4" style="color: #0288d1;">واجهة الممرض</h1>
-
-        <!-- Manage Patients Section -->
-        <div id="manage-patients" class="section active">
-            <div class="card">
-                <h3>إدارة المرضى</h3>
-                <div id="patientMessage" class="message"></div>
-                <div class="input-group mb-3" style="max-width: 300px;">
-                    <input type="text" class="form-control" id="searchBar"
-                        placeholder="ابحث باسم المريض أو رقم التعريف">
-                    <button class="btn btn-primary" onclick="searchPatients('manage-patients')">بحث</button>
-                </div>
-                <table id="managePatientsTable" class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>الاسم و اللقب</th>
-                            <th>رقم الغرفة</th>
-                            <th>الجنس</th>
-                            <th>الحالة</th>
-                            <th>التوصيات الطبية</th>
-                            <th>تفاصيل حول المريض</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- All Patients Section -->
-        <div id="all-patients" class="section">
-            <div class="card">
-                <h3>جميع المرضى</h3>
-                <div id="allPatientsMessage" class="message"></div>
-                <div class="input-group mb-3" style="max-width: 300px;">
-                    <input type="text" class="form-control" id="searchBarAll"
-                        placeholder="ابحث باسم المريض أو رقم التعريف">
-                    <button class="btn btn-primary" onclick="searchPatients('all-patients')">بحث</button>
-                </div>
-                <table id="allPatientsTable" class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>الاسم واللقب</th>
-                            <th>اللقب</th>
-                            <th>رقم الغرفة</th>
-                            <th>الجنس</th>
-                            <th>الحالة</th>
-                            <th>الحالة النشطة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Update Patient Modal -->
-    <div class="modal fade" id="updatePatientModal" tabindex="-1" aria-labelledby="updatePatientModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="updatePatientModalLabel">تحديث بيانات المريض</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="updatePatientForm" class="row g-3">
-                        <!-- Status -->
-                        <div class="col-md-6">
-                            <label for="updateStatus">الحالة</label>
-                            <select class="form-select" id="updateStatus" name="etat_santee" required>
-                                <option value="">اختر الحالة</option>
-                                <option value="حالة مستقرة">حالة مستقرة</option>
-                                <option value="حالة حرجة">حالة حرجة</option>
-                                <option value="حالة خطيرة">حالة خطيرة</option>
-                                <option value="حالة غير مستقرة">حالة غير مستقرة</option>
-                                <option value="حالة وفاة سريرية">حالة وفاة سريرية</option>
-                                <option value="حالة وفاة">حالة وفاة</option>
-                            </select>
-                        </div>
-                    
-                        <!-- Prescription: medication, dosage, frequency, instruction -->
-                        <div class="col-md-12">
-                            <label>الأدوية</label>
-                            <div id="prescriptions">
-                                <div class="input-group mb-2 prescription-item">
-                                    <input type="text" class="form-control" placeholder="الدواء" name="medicament[]">
-                                    <input type="text" class="form-control" placeholder="الجرعة" name="dosage[]">
-                                    <input type="text" class="form-control" placeholder="التردد" name="frequency[]">
-                                    <input type="text" class="form-control" placeholder="تعليمات" name="instruction[]">
-                                    <button type="button" class="btn btn-outline-danger" onclick="removePrescription(this)">حذف</button>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-outline-primary mt-2" onclick="addPrescription()">إضافة دواء</button>
-                        </div>
-                    
-                        <!-- Diagnosis -->
-                        <div class="col-md-12">
-                            <label for="updateDiagnosis">التشخيص</label>
-                            <textarea class="form-control" id="updateDiagnosis" name="diagnosis" rows="3" placeholder="أدخل التشخيص هنا" required></textarea>
-                        </div>
-                    
-                        <!-- Treatment Method -->
-                        <div class="col-md-12">
-                            <label for="updateTreatmentMethod">طريقة العلاج</label>
-                            <textarea class="form-control" id="updateTreatmentMethod" name="treatment_method" rows="3" placeholder="أدخل طريقة العلاج هنا" required></textarea>
-                        </div>
-                    
-                        <!-- Suivi / Vital Signs -->
-                        <div class="col-md-6">
-                            <label for="updateTension">ضغط الدم (mmHg)</label>
-                            <input type="text" class="form-control" id="updateTension" name="tension" placeholder="مثال: 120/80">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="updateTemperature">درجة الحرارة (°C)</label>
-                            <input type="number" step="0.1" class="form-control" id="updateTemperature" name="temperature" placeholder="مثال: 36.5">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="updateFrequenceCardiaque">معدل ضربات القلب (نبضة/دقيقة)</label>
-                            <input type="number" class="form-control" id="updateFrequenceCardiaque" name="frequence_quardiaque" placeholder="مثال: 80">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="updateSaturationOxygene">نسبة الأكسجين في الدم (%)</label>
-                            <input type="number" class="form-control" id="updateSaturationOxygene" name="saturation_oxygene" placeholder="مثال: 98">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="updateGlycemie">مستوى الجلوكوز في الدم (mg/dL)</label>
-                            <input type="number" step="0.1" class="form-control" id="updateGlycemie" name="glycemie" placeholder="مثال: 90">
-                        </div>
-                        <div class="col-md-12">
-                            <label for="updateRemarque">ملاحظات</label>
-                            <textarea class="form-control" id="updateRemarque" name="Remarque" rows="3" placeholder="أدخل ملاحظات إضافية"></textarea>
-                        </div>
-                    
-                        <!-- Date of Observation -->
-                        <div class="col-md-6">
-                            <label for="updateDateObservation">تاريخ الملاحظة</label>
-                            <input type="datetime-local" class="form-control" id="updateDateObservation" name="Date_observation">
-                        </div>
-                    </form>
-                    
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                    <button type="button" class="btn btn-primary" id="updateButton">تحديث</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Select Room Modal for Add -->
-    <div class="modal fade" id="selectRoomModalAdd" tabindex="-1" aria-labelledby="selectRoomModalAddLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="selectRoomModalAddLabel">اختر غرفة</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="availableRoomsAdd" class="row"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Recommendations Modal -->
-    <div class="modal fade" id="viewRecommendationsModal" tabindex="-1" aria-labelledby="viewRecommendationsModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewRecommendationsModalLabel">التوصيات الطبية</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="viewRecommendationsContent"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Patient Details Modal -->
-    <div class="modal fade" id="viewPatientDetailsModal" tabindex="-1" aria-labelledby="viewPatientDetailsModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewPatientDetailsModalLabel">تفاصيل المريض</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="viewPatientDetailsContent"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
+<a href="#" onclick="showSection('all-patients')"><i class="bi bi-people"></i> <span>جميع المرضى</span></a>
+<a href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> <span>تسجيل الخروج</span></a>
+</div>
+<div class="content">
+<h1 class="text-center mb-4" style="color: #0288d1;">واجهة الممرض</h1>
+<!-- Manage Patients Section -->
+<div class="section active" id="manage-patients">
+<div class="card">
+<h3>إدارة المرضى</h3>
+<div class="message" id="patientMessage"></div>
+<div class="input-group mb-3" style="max-width: 300px;">
+<input class="form-control" id="searchBar" placeholder="ابحث باسم المريض أو رقم التعريف" type="text"/>
+<button class="btn btn-primary" onclick="searchPatients('manage-patients')">بحث</button>
+</div>
+<table class="table table-striped table-hover" id="managePatientsTable">
+<thead>
+<tr>
+<th>الاسم و اللقب</th>
+<th>رقم الغرفة</th>
+<th>الجنس</th>
+<th>الحالة</th>
+<th>التوصيات الطبية</th>
+<th>تفاصيل حول المريض</th>
+<th>الإجراءات</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+<!-- All Patients Section -->
+<div class="section" id="all-patients">
+<div class="card">
+<h3>جميع المرضى</h3>
+<div class="message" id="allPatientsMessage"></div>
+<div class="input-group mb-3" style="max-width: 300px;">
+<input class="form-control" id="searchBarAll" placeholder="ابحث باسم المريض أو رقم التعريف" type="text"/>
+<button class="btn btn-primary" onclick="searchPatients('all-patients')">بحث</button>
+</div>
+<table class="table table-striped table-hover" id="allPatientsTable">
+<thead>
+<tr>
+<th>الاسم واللقب</th>
+<th>اللقب</th>
+<th>رقم الغرفة</th>
+<th>الجنس</th>
+<th>الحالة</th>
+<th>الحالة النشطة</th>
+<th>الإجراءات</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Update Patient Modal -->
+<div aria-hidden="true" aria-labelledby="addPatientModalLabel" class="modal fade" id="addPatientModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="addPatientModalLabel">إضافة مريض جديد</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<form class="row g-3" id="addPatientForm">
+<div class="col-md-6">
+<div class="form-group">
+<label for="addName">الاسم</label>
+<input class="form-control" id="addName" name="name" required="" type="text"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addSurname">اللقب</label>
+<input class="form-control" id="addSurname" name="surname" required="" type="text"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addIdNumber">رقم التعريف</label>
+<input class="form-control" id="addIdNumber" name="id_number" required="" type="text"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addPhoneNumber">رقم الهاتف</label>
+<input class="form-control" id="addPhoneNumber" name="phone_number" required="" type="text"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addGender">الجنس</label>
+<select class="form-select" id="addGender" name="gender" required="">
+<option value="">اختر الجنس</option>
+<option value="ذكر">ذكر</option>
+<option value="أنثى">أنثى</option>
+</select>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addBirthDate">تاريخ الميلاد</label>
+<input class="form-control" id="addBirthDate" name="birth_date" required="" type="date"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addBloodType">زمرة الدم</label>
+<select class="form-select" id="addBloodType" name="blood_type" required="">
+<option value="">اختر زمرة الدم</option>
+<option value="A+">A+</option>
+<option value="A-">A-</option>
+<option value="B+">B+</option>
+<option value="B-">B-</option>
+<option value="AB+">AB+</option>
+<option value="AB-">AB-</option>
+<option value="O+">O+</option>
+<option value="O-">O-</option>
+</select>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addRoom">رقم الغرفة</label>
+<div class="input-group">
+<input class="form-control" id="addRoom" name="room" readonly="" required="" type="text"/>
+<button class="btn btn-primary" data-bs-target="#selectRoomModalAdd" data-bs-toggle="modal" type="button">اختر غرفة</button>
+</div>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addStatus">الحالة</label>
+<select class="form-select" id="addStatus" name="status" required="">
+<option value="">اختر الحالة</option>
+<option value="حالة مستقرة">حالة مستقرة</option>
+<option value="حالة حرجة">حالة حرجة</option>
+<option value="حالة خطيرة">حالة خطيرة</option>
+<option value="حالة غير مستقرة">حالة غير مستقرة</option>
+<option value="حالة وفاة سريرية">حالة وفاة سريرية</option>
+<option value="حالة وفاة">حالة وفاة</option>
+</select>
+</div>
+</div>
+<div class="col-md-12">
+<div class="form-group">
+<label>الأدوية</label>
+<div id="addRecommendations">
+<div class="input-group mb-2 recommendation-item">
+<input class="form-control" name="medication[]" placeholder="الدواء" type="text"/>
+<input class="form-control" name="dosage[]" placeholder="الجرعة" type="text"/>
+<button class="btn btn-outline-danger" onclick="removeRecommendation(this)" type="button">حذف</button>
+</div>
+</div>
+<button class="btn btn-outline-primary mt-2" onclick="addRecommendation('addRecommendations')" type="button">إضافة دواء</button>
+</div>
+</div>
+<div class="col-md-12">
+<div class="form-group">
+<label for="addDiagnosis">التشخيص</label>
+<textarea class="form-control" id="addDiagnosis" name="diagnosis" placeholder="أدخل التشخيص هنا" required="" rows="3"></textarea>
+</div>
+</div>
+<div class="col-md-12">
+<div class="form-group">
+<label for="addTreatmentMethod">طريقة العلاج</label>
+<textarea class="form-control" id="addTreatmentMethod" name="treatment_method" placeholder="أدخل طريقة العلاج هنا" required="" rows="3"></textarea>
+</div>
+</div>
+<!-- البيانات الحيوية -->
+<div class="col-md-6">
+<div class="form-group">
+<label for="addTemperature">درجة الحرارة (°C)</label>
+<input class="form-control" id="addTemperature" name="temperature" placeholder="مثال: 36.5" step="0.1" type="number"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addHeartRate">معدل ضربات القلب (نبضة/دقيقة)</label>
+<input class="form-control" id="addHeartRate" name="heart_rate" placeholder="مثال: 80" type="number"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addRespiratoryRate">معدل التنفس (نفس/دقيقة)</label>
+<input class="form-control" id="addRespiratoryRate" name="respiratory_rate" placeholder="مثال: 16" type="number"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addBloodPressure">ضغط الدم (mmHg)</label>
+<input class="form-control" id="addBloodPressure" name="blood_pressure" placeholder="مثال: 120/80" type="text"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addOxygenSaturation">نسبة الأكسجين في الدم (%)</label>
+<input class="form-control" id="addOxygenSaturation" name="oxygen_saturation" placeholder="مثال: 98" type="number"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addWeight">الوزن (كجم)</label>
+<input class="form-control" id="addWeight" name="weight" placeholder="مثال: 70" step="0.1" type="number"/>
+</div>
+</div>
+<div class="col-md-6">
+<div class="form-group">
+<label for="addHeight">الطول (سم)</label>
+<input class="form-control" id="addHeight" name="height" placeholder="مثال: 170" type="number"/>
+</div>
+</div>
+</form>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">إغلاق</button>
+<button class="btn btn-primary" id="addButton" type="button">إضافة</button>
+</div>
+</div>
+</div>
+</div><div aria-hidden="true" aria-labelledby="updatePatientModalLabel" class="modal fade" id="updatePatientModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="updatePatientModalLabel">تحديث بيانات المريض</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<form class="row g-3" id="updatePatientForm">
+<!-- Status -->
+<div class="col-md-6">
+<label for="updateStatus">الحالة</label>
+<select class="form-select" id="updateStatus" name="etat_santee" required="">
+<option value="">اختر الحالة</option>
+<option value="حالة مستقرة">حالة مستقرة</option>
+<option value="حالة حرجة">حالة حرجة</option>
+<option value="حالة خطيرة">حالة خطيرة</option>
+<option value="حالة غير مستقرة">حالة غير مستقرة</option>
+<option value="حالة وفاة سريرية">حالة وفاة سريرية</option>
+<option value="حالة وفاة">حالة وفاة</option>
+</select>
+</div>
+<div class="col-md-12">
+<label>الأدوية</label>
+<div id="prescriptions">
+<div class="input-group mb-2 prescription-item">
+<input class="form-control" name="medicament[]" placeholder="الدواء" type="text"/>
+<input class="form-control" name="dosage[]" placeholder="الجرعة" type="text"/>
+<input class="form-control" name="frequency[]" placeholder="التردد" type="text"/>
+<input class="form-control" name="instruction[]" placeholder="تعليمات" type="text"/>
+<button class="btn btn-outline-danger" onclick="removePrescription(this)" type="button">حذف</button>
+</div>
+</div>
+<button class="btn btn-outline-primary mt-2" onclick="addPrescription()" type="button">إضافة دواء</button>
+</div>
+<!-- Diagnosis -->
+<div class="col-md-12">
+<label for="updateDiagnosis">التشخيص</label>
+<textarea class="form-control" id="updateDiagnosis" name="diagnosis" placeholder="أدخل التشخيص هنا" required="" rows="3"></textarea>
+</div>
+<!-- Treatment Method -->
+<div class="col-md-12">
+<label for="updateTreatmentMethod">طريقة العلاج</label>
+<textarea class="form-control" id="updateTreatmentMethod" name="treatment_method" placeholder="أدخل طريقة العلاج هنا" required="" rows="3"></textarea>
+</div>
+<!-- Suivi / Vital Signs -->
+<div class="col-md-6">
+<label for="updateTension">ضغط الدم (mmHg)</label>
+<input class="form-control" id="updateTension" name="tension" placeholder="مثال: 120/80" type="text"/>
+</div>
+<div class="col-md-6">
+<label for="updateTemperature">درجة الحرارة (°C)</label>
+<input class="form-control" id="updateTemperature" name="temperature" placeholder="مثال: 36.5" step="0.1" type="number"/>
+</div>
+<div class="col-md-6">
+<label for="updateFrequenceCardiaque">معدل ضربات القلب (نبضة/دقيقة)</label>
+<input class="form-control" id="updateFrequenceCardiaque" name="frequence_quardiaque" placeholder="مثال: 80" type="number"/>
+</div>
+<div class="col-md-6">
+<label for="updateSaturationOxygene">نسبة الأكسجين في الدم (%)</label>
+<input class="form-control" id="updateSaturationOxygene" name="saturation_oxygene" placeholder="مثال: 98" type="number"/>
+</div>
+<div class="col-md-6">
+<label for="updateGlycemie">مستوى الجلوكوز في الدم (mg/dL)</label>
+<input class="form-control" id="updateGlycemie" name="glycemie" placeholder="مثال: 90" step="0.1" type="number"/>
+</div>
+<div class="col-md-12">
+<label for="updateRemarque">ملاحظات</label>
+<textarea class="form-control" id="updateRemarque" name="Remarque" placeholder="أدخل ملاحظات إضافية" rows="3"></textarea>
+</div>
+<!-- Date of Observation -->
+<div class="col-md-6">
+<label for="updateDateObservation">تاريخ الملاحظة</label>
+<input class="form-control" id="updateDateObservation" name="Date_observation" type="datetime-local"/>
+</div>
+<div class="col-md-6">
+    <label for="updateWeight">الوزن (كجم)</label>
+    <input class="form-control" id="updateWeight" name="weight" placeholder="مثال: 70" step="0.1" type="number"/>
+</div>
+<div class="col-md-6">
+    <label for="updateHeight">الطول (سم)</label>
+    <input class="form-control" id="updateHeight" name="height" placeholder="مثال: 170" type="number"/>
+</div>
+</form>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">إغلاق</button>
+<button class="btn btn-primary" id="updateButton" type="button">تحديث</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Select Room Modal for Add -->
+<div aria-hidden="true" aria-labelledby="selectRoomModalAddLabel" class="modal fade" id="selectRoomModalAdd" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="selectRoomModalAddLabel">اختر غرفة</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<div class="row" id="availableRoomsAdd"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- View Recommendations Modal -->
+<div aria-hidden="true" aria-labelledby="viewRecommendationsModalLabel" class="modal fade" id="viewRecommendationsModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="viewRecommendationsModalLabel">التوصيات الطبية</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body" id="viewRecommendationsContent"></div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">إغلاق</button>
+</div>
+</div>
+</div>
+</div>
+<!-- View Patient Details Modal -->
+<div aria-hidden="true" aria-labelledby="viewPatientDetailsModalLabel" class="modal fade" id="viewPatientDetailsModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="viewPatientDetailsModalLabel">تفاصيل المريض</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body" id="viewPatientDetailsContent"></div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">إغلاق</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
         // DOM Elements
 const patientMessage = document.getElementById('patientMessage');
 const allPatientsMessage = document.getElementById('allPatientsMessage');
@@ -614,33 +763,165 @@ async function loadAvailableRooms(nurse_id) {
         const response = await axios.get('/nurse/room', {
             params: { nurse_id: nurse_id }
         });
-
+        
         console.log(response);
-
         const rooms = response.data;
-        const container = document.getElementById('availableRoomsAdd');
-        if (!container) return;
-
-        container.innerHTML = '';
-
+        
         if (!Array.isArray(rooms) || rooms.length === 0) {
-            container.innerHTML = '<p class="text-center">لا توجد غرف متاحة</p>';
+            showMessage('لا توجد غرف متاحة', 'info');
             return;
         }
-
-        rooms.forEach(room => {
-            const roomBtn = document.createElement('button');
-            roomBtn.className = 'btn btn-outline-primary m-1';
-            roomBtn.textContent = room.numero_cr || room.room_number || 'غير محدد';
-            roomBtn.onclick = () => selectRoom(room);
-            container.appendChild(roomBtn);
-        });
-
+        
+        // Create modal for room selection
+        showRoomSelectionModal(rooms);
+        
     } catch (error) {
         console.error('Error loading rooms:', error);
         showMessage('حدث خطأ أثناء تحميل الغرف', 'error');
     }
 }
+
+function showRoomSelectionModal(rooms) {
+    // Create modal HTML
+    const modalHTML = `
+        <div class="modal fade" id="roomSelectionModal" tabindex="-1" aria-labelledby="roomSelectionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="roomSelectionModalLabel">اختر غرفة</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row" id="roomOptionsContainer">
+                            <!-- Room options will be inserted here -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('roomSelectionModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Populate room options
+    const container = document.getElementById('roomOptionsContainer');
+    rooms.forEach(room => {
+        const roomNumber = room.numero_cr || 'غير محدد';
+        const bedNumber = room.numero_lit || '';
+        const displayText = bedNumber ? `غرفة ${roomNumber} - سرير ${bedNumber}` : `غرفة ${roomNumber}`;
+        
+        const roomOption = document.createElement('div');
+        roomOption.className = 'col-6 mb-2';
+        roomOption.innerHTML = `
+            <button type="button" class="btn btn-outline-primary w-100 room-option-btn" data-room='${JSON.stringify(room)}'>
+                ${displayText}
+            </button>
+        `;
+        container.appendChild(roomOption);
+    });
+    
+    // Add click handlers for room selection
+    document.querySelectorAll('.room-option-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const roomData = JSON.parse(this.getAttribute('data-room'));
+            selectRoomForPatient(roomData);
+        });
+    });
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('roomSelectionModal'));
+    modal.show();
+    
+    // Clean up modal after it's hidden
+    document.getElementById('roomSelectionModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+function selectRoomForPatient(room) {
+    if (!selectedSejourId) {
+        showMessage('خطأ في تحديد الإقامة', 'error');
+        return;
+    }
+
+    const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!nurse || !nurse.id) {
+        showMessage('خطأ في بيانات المستخدم', 'error');
+        return;
+    }
+
+    // Update room assignment
+    axios.put('/sejour/room', {
+        id_sejour: selectedSejourId,
+        id_chambre: room.id_chambre || room.room_id,
+        id_agent: nurse.id
+    })
+    .then(response => {
+        if (response.status === 200) {
+            loadManagePatients();
+            showMessage('تم تحديث رقم الغرفة بنجاح', 'success');
+        } else {
+            showMessage('فشل في تحديث الغرفة', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating room:', error);
+        showMessage('حدث خطأ أثناء التحديث', 'error');
+    })
+    .finally(() => {
+        // Close the room selection modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('roomSelectionModal'));
+        if (modal) modal.hide();
+    });
+}
+
+// Keep your original selectRoom function for other uses
+function selectRoom(room) {
+    if (!selectedSejourId) {
+        showMessage('خطأ في تحديد الإقامة', 'error');
+        return;
+    }
+
+    const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!nurse || !nurse.id) {
+        showMessage('خطأ في بيانات المستخدم', 'error');
+        return;
+    }
+
+    // Update room assignment
+    axios.put('/sejour/room', {
+        id_sejour: selectedSejourId,
+        id_chambre: room.id_chambre || room.room_id,
+        id_agent: nurse.id
+    })
+    .then(response => {
+        if (response.status === 200) {
+            loadManagePatients();
+            showMessage('تم تحديث رقم الغرفة بنجاح', 'success');
+        } else {
+            showMessage('فشل في تحديث الغرفة', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating room:', error);
+        showMessage('حدث خطأ أثناء التحديث', 'error');
+    })
+    .finally(() => {
+        const modal = bootstrap.Modal.getInstance(selectRoomModalAdd);
+        if (modal) modal.hide();
+    });
+}
+
 
 function selectRoom(room) {
     if (!selectedSejourId) {
@@ -732,7 +1013,7 @@ function displayPatients(table, patientsList, isManageSection) {
     if (!Array.isArray(patientsList) || patientsList.length === 0) {
         const row = table.insertRow();
         const cell = row.insertCell();
-        cell.colSpan = isManageSection ? 7 : 7;
+        cell.colSpan = 7; // Default colspan, adjust if more columns are shown for nurse view
         cell.textContent = 'لا توجد بيانات للعرض';
         cell.style.textAlign = 'center';
         return;
@@ -741,23 +1022,27 @@ function displayPatients(table, patientsList, isManageSection) {
     patientsList.forEach(patient => {
         const row = table.insertRow();
 
-        const isActive = (patient.Date_sortie || patient.Date_sortiee) ? 'غير نشط' : 'نشط';
-        const patientName = patient.full_name || `${patient.Nom || ''} ${patient.Prénom || ''}`.trim() || '-';
-        const roomNumber = patient.Numero_cr || patient.Numéro_CR || '-';
-        const patientId = patient.id_patient || patient.patient_id;
-        const sejourId = patient.id_séjour || patient.id_sejour || patient.sejour_id;
+        const isActive = (patient.Date_sortiee) ? 'غير نشط' : 'نشط'; // Use Date_sortiee from our PHP alias
+        const patientName = patient.full_name || '-';
+        // Use the alias 'room_number' from the PHP model
+        const roomNumberToDisplay = patient.room_number || '-'; 
+        const patientId = patient.id_patient;
+        const sejourId = patient.id_sejour;
+        // Use the alias 'service_name' from the PHP model
+        const serviceNameToDisplay = patient.service_name || '-'; 
 
         if (isManageSection) {
-            // Manage Patients section
+            // Adjust colspan if needed based on actual columns for managePatientsTable
+            // Current managePatientsTable seems to have: Name, Room, Sex, Status, Recommendations, Details, Update action -> 7 columns
             row.innerHTML = `
                 <td>${patientName}</td>
                 <td class="room-cell">
-                    ${roomNumber}
+                    ${roomNumberToDisplay}
                     <i class="bi bi-pencil-square room-icon"
                        onclick="openRoomSelection(${sejourId})"
                        title="تغيير الغرفة"></i>
                 </td>
-                <td>${patient.sex || patient.Gender || '-'}</td>
+                <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
                 <td>${isActive}</td>
                 <td class="notes-cell">
                     <i class="bi bi-eye notes-icon"
@@ -782,17 +1067,18 @@ function displayPatients(table, patientsList, isManageSection) {
                     </button>
                 </td>
             `;
-        } else {
-            // All Patients section
+        } else { // This is for allPatientsTable
+             // Adjust colspan if needed based on actual columns for allPatientsTable
+             // Current allPatientsTable seems to have: Name, NIN, Room, Sex, Service, Status, Discharge Action -> 7 columns
             row.innerHTML = `
                 <td>${patientName}</td>
                 <td>${patient.NIN || '-'}</td>
-                <td>${roomNumber}</td>
-                <td>${patient.sex || patient.Gender || '-'}</td>
-                <td>${patient.nom_service || patient.Nom_S || '-'}</td>
+                <td>${roomNumberToDisplay}</td>
+                <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
+                <td>${serviceNameToDisplay}</td>
                 <td>${isActive}</td>
                 <td>
-                    ${(patient.Date_sortie || patient.Date_sortiee)
+                    ${(patient.Date_sortiee)
                         ? '<span class="text-muted">تم الخروج</span>'
                         : `<button class="btn btn-warning btn-sm"
                                    onclick="togglePatientStatus(${sejourId})">
@@ -875,6 +1161,8 @@ async function saveUpdatedPatient() {
         const glycemie = parseFloat(document.getElementById('updateGlycemie')?.value) || null;
         const remarque = document.getElementById('updateRemarque')?.value?.trim();
         const dateObservation = document.getElementById('updateDateObservation')?.value;
+        const weight = parseFloat(document.getElementById('updateWeight')?.value) || null;
+        const height = parseFloat(document.getElementById('updateHeight')?.value) || null;
 
         if (!status) {
             throw new Error('يرجى تحديد حالة المريض');
@@ -927,7 +1215,9 @@ async function saveUpdatedPatient() {
             frequence_quardiaque: frequenceCardiaque,
             saturation_oxygene: saturationOxygene,
             glycemie: glycemie,
-            Remarque: remarque || null
+            Remarque: remarque || null,
+            poids: weight,
+            taille: height
         };
 
         const suiviResponse = await axios.post('/suivis', suiviData);
@@ -1036,11 +1326,7 @@ async function viewRecommendations(sejourId) {
                     : '<p>لا توجد أدوية محددة</p>'
                 }
             </div>
-            <h6>التشخيص:</h6>
-            <p>${sejourDetails.Diagnosis || '-'}</p>
-            <h6>طريقة العلاج:</h6>
-            <p>${sejourDetails.Treatment_method || '-'}</p>
-        `;
+            `;
 
         const modalTitle = document.getElementById('viewRecommendationsModalLabel');
         if (modalTitle) {
@@ -1095,8 +1381,8 @@ async function viewPatientDetails(patientId) {
                     <p><strong>ضغط الدم:</strong> ${patient.tension || patient.blood_pressure || '-'}</p>
                     <p><strong>نسبة الأكسجين:</strong> ${patient.saturation_oxygene || patient.oxygen_saturation ? (patient.saturation_oxygene || patient.oxygen_saturation) + '%' : '-'}</p>
                     <p><strong>مستوى الجلوكوز:</strong> ${patient.glycemie || patient.glucose_level ? (patient.glycemie || patient.glucose_level) + ' mg/dL' : '-'}</p>
-                    <p><strong>الوزن:</strong> ${patient.Poids || patient.weight ? (patient.Poids || patient.weight) + ' كجم' : '-'}</p>
-                    <p><strong>الطول:</strong> ${patient.Taille || patient.height ? (patient.Taille || patient.height) + ' سم' : '-'}</p>
+                    <p><strong>الوزن:</strong> ${patient.poids || patient.weight ? (patient.poids || patient.weight) + ' كجم' : '-'}</p>
+                    <p><strong>الطول:</strong> ${patient.taille || patient.height ? (patient.taille || patient.height) + ' سم' : '-'}</p>
                 </div>
             </div>
         `;
@@ -1242,7 +1528,5 @@ document.addEventListener('visibilitychange', function() {
     }
 });
 </script>
-
 </body>
-
 </html>

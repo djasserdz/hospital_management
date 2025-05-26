@@ -24,8 +24,8 @@ if ($method == "GET") {
             exit;
         }
         else{
-            $room=new Chambre($db);
-            $result=$room->getrooms($_GET['nurse_id']);
+            $room_model = new Chambre($db);
+            $result = $room_model->getrooms($_GET['nurse_id']);
             echo json_encode($result);
             exit;
         }
@@ -45,4 +45,7 @@ if ($method == "GET") {
         http_response_code(404);
         echo json_encode(["message"=>"Endpoint does not exist"]);
     }
+}
+else if($method == "PUT"){
+
 }

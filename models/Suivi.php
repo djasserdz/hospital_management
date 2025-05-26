@@ -10,6 +10,8 @@ class Suivi{
    public  $frequence_quardiaque;
     public $saturation_oxygene;
      public $glycemie;
+     public $poids;
+     public $taille;
      public $Remarque;
      public $Date_observation;
 
@@ -19,9 +21,9 @@ class Suivi{
 }
 public function create($input) {
     $sql = "INSERT INTO " . $this->table . " 
-        (id_sejour, id_nurse, etat_santee, tension, temperature, frequence_quardiaque, saturation_oxygene, glycemie, Remarque, Date_observation) 
+        (id_sejour, id_nurse, etat_santee, tension, temperature, frequence_quardiaque, saturation_oxygene, glycemie, poids, taille, Remarque, Date_observation) 
         VALUES 
-        (:id_sejour, :id_nurse, :etat_santee, :tension, :temperature, :frequence_quardiaque, :saturation_oxygene, :glycemie, :Remarque, :Date_observation)";
+        (:id_sejour, :id_nurse, :etat_santee, :tension, :temperature, :frequence_quardiaque, :saturation_oxygene, :glycemie, :poids, :taille, :Remarque, :Date_observation)";
 
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(':id_sejour', $input['id_sejour']);
@@ -32,6 +34,8 @@ public function create($input) {
     $stmt->bindParam(':frequence_quardiaque', $input['frequence_quardiaque']);
     $stmt->bindParam(':saturation_oxygene', $input['saturation_oxygene']);
     $stmt->bindParam(':glycemie', $input['glycemie']);
+    $stmt->bindParam(':poids', $input['poids']);
+    $stmt->bindParam(':taille', $input['taille']);
     $stmt->bindParam(':Remarque', $input['Remarque']);
     $date = $input['Date_observation'] ?? date('Y-m-d H:i:s');
     $stmt->bindParam(':Date_observation', $date);
@@ -53,6 +57,8 @@ public function update($input) {
         frequence_quardiaque = :frequence_quardiaque,
         saturation_oxygene = :saturation_oxygene,
         glycemie = :glycemie,
+        poids = :poids,
+        taille = :taille,
         Remarque = :Remarque,
         Date_observation = :Date_observation
         WHERE id_suivi = :id_suivi";
@@ -68,6 +74,8 @@ public function update($input) {
     $stmt->bindParam(':frequence_quardiaque', $input['frequence_quardiaque']);
     $stmt->bindParam(':saturation_oxygene', $input['saturation_oxygene']);
     $stmt->bindParam(':glycemie', $input['glycemie']);
+    $stmt->bindParam(':poids', $input['poids']);
+    $stmt->bindParam(':taille', $input['taille']);
     $stmt->bindParam(':Remarque', $input['Remarque']);
     $stmt->bindParam(':Date_observation', $input['Date_observation']);
     $stmt->bindParam(':id_suivi', $input['id_suivi']);

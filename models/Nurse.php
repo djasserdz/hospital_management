@@ -17,25 +17,45 @@ class Nurse {
    
 
     public function getAllPatients() {
-        $find_service="SELECT id_service FROM Users WHERE id=:id ";
-        $stmt1=$this->conn->prepare($find_service);
-        $stmt1->bindParam(":id",$this->id_user);
+        // Step 1: Get the service ID for the current nurse ($this->id_user must be set prior to calling this)
+        $find_service_query = "SELECT id_service FROM Users WHERE id = :id_user LIMIT 1";
+        $stmt_find_service = $this->conn->prepare($find_service_query);
+        $stmt_find_service->bindParam(":id_user", $this->id_user, PDO::PARAM_INT);
+        
+        if (!$stmt_find_service->execute()) {
+            error_log("Failed to execute query to find nurse's service ID for nurse: " . $this->id_user);
+            return []; // Or handle error appropriately
+        }
+        
+        $nurse_data = $stmt_find_service->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$nurse_data || !isset($nurse_data['id_service'])) {
+            error_log("Nurse not found or no service ID for nurse: " . $this->id_user);
+            return []; // Or handle error appropriately
+        }
+        
+        $actual_id_service = $nurse_data['id_service'];
 
-        $id_service=$stmt1->execute();
-
-        $query = "SELECT Patients.*,Sejour.*,Chambres.*,Services.* FROM Patients
+        // Step 2: Fetch patients based on the nurse's actual service ID
+        $query = "SELECT Patients.id_patient, Patients.full_name, Patients.NIN, Patients.age, Patients.sex, 
+                         Sejour.id_sejour, Sejour.Date_entree, Sejour.Date_sortiee,
+                         Chambres.Numero_cr as room_number, Chambres.id_chambre as room_id,
+                         Services.nom_service as service_name, Services.id_service as service_id
+                  FROM Patients
                   JOIN Sejour ON Sejour.id_patient = Patients.id_patient
                   JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
                   JOIN Services ON Services.id_service = Chambres.id_service
-                  WHERE Services.id_service = $id_service";
+                  WHERE Services.id_service = :actual_id_service";
 
-        $stmt = $this->conn->prepare($query);
-        //$stmt->bindParam(':id_service', $this->id_service);
-        $stmt->execute();
+        $stmt_patients = $this->conn->prepare($query);
+        $stmt_patients->bindParam(':actual_id_service', $actual_id_service, PDO::PARAM_INT);
+        
+        if (!$stmt_patients->execute()) {
+            error_log("Failed to execute query to fetch patients for service ID: " . $actual_id_service);
+            return []; // Or handle error appropriately
+        }
 
-        $result=$stmt->fetchAll();
-
-        return $result;
+        return $stmt_patients->fetchAll(PDO::FETCH_ASSOC);
     }
 
     

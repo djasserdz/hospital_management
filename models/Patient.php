@@ -289,6 +289,30 @@ class Patient {
         return $stmt->fetch(PDO::FETCH_ASSOC); // if expecting single result
         // OR use fetchAll() if expecting multiple observations
     }
+
+    public function getAllPatientsForAdmin() {
+        // This query aims to get all patients and their latest sejour/room/service information if available.
+        // Patients without an active sejour or room will still be listed, but room/service details will be NULL.
+        $query = "SELECT 
+                    p.id_patient, p.full_name, p.NIN, p.age, p.sex, p.adress, p.telephone, p.groupage,
+                    s.id_sejour, s.Date_entree, s.Date_sortiee,
+                    ch.Numero_cr as room_number, ch.id_chambre as room_id,
+                    srv.nom_service as service_name, srv.id_service as service_id
+                  FROM " . $this->table . " p
+                  LEFT JOIN Sejour s ON p.id_patient = s.id_patient AND s.Date_sortiee IS NULL -- Link to current (active) sejour only
+                  LEFT JOIN Chambres ch ON s.id_chambre = ch.id_chambre
+                  LEFT JOIN Services srv ON ch.id_service = srv.id_service
+                  ORDER BY p.id_patient ASC"; // Or any other preferred order
+
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in Patient::getAllPatientsForAdmin(): " . $e->getMessage());
+            return []; // Return empty array on error
+        }
+    }
     
 }
 

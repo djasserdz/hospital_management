@@ -249,8 +249,13 @@
                     <thead>
                         <tr>
                             <th>الاسم و اللقب</th>
+                            <th>رقم التعريف</th>
+                            <th>العمر</th>
                             <th>الجنس</th>
                             <th>القسم</th>
+                            <th>الغرفة</th>
+                            <th>تاريخ الدخول</th>
+                            <th>تاريخ الخروج</th>
                             <th>التفاصيل</th>
                             <th>الإجراءات</th>
                         </tr>
@@ -562,30 +567,48 @@
 
         async function loadManagePatients() {
             try {
-                const response = await axios.get("/patients");
-                const patients = response.data.patients;
+                const response = await axios.get("/admin/patients/all");
+                const patients = response.data;
 
-                managePatientsTable.innerHTML = '';
+                const managePatientsTableBody = document.getElementById('managePatientsTable').getElementsByTagName('tbody')[0];
+                if (!managePatientsTableBody) {
+                    console.error("Cannot find tbody in managePatientsTable");
+                    return;
+                }
+                managePatientsTableBody.innerHTML = '';
                 
-                patients.forEach(patient => {
-                    const row = managePatientsTable.insertRow();
-                    row.innerHTML = `
-                        <td>${patient.full_name || '-'}</td>
-                        <td>${patient.sex === 'homme' ? 'ذكر' : 'أنثى'}</td>
-                        <td>${patient.nom_service || '-'}</td>
-                        <td>
-                            <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
-                               data-bs-toggle="modal" data-bs-target="#detailsPatientModal"></i>
-                        </td>
-                        <td>
-                            <button class="btn btn-primary btn-sm" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour})" 
-                                    data-bs-toggle="modal" data-bs-target="#updatePatientModal">تحديث</button>
-                        </td>
-                    `;
-                });
+                if (patients && patients.length > 0) {
+                    patients.forEach(patient => {
+                        const row = managePatientsTableBody.insertRow();
+                        row.innerHTML = `
+                            <td>${patient.full_name || '-'}</td>
+                            <td>${patient.NIN || '-'}</td>
+                            <td>${patient.age || '-'}</td>
+                            <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
+                            <td>${patient.service_name || 'غير محدد'}</td> 
+                            <td>${patient.room_number || 'لا يوجد'}</td>
+                            <td>${patient.Date_entree ? new Date(patient.Date_entree).toLocaleDateString() : '-'}</td>
+                            <td>${patient.Date_sortiee ? new Date(patient.Date_sortiee).toLocaleDateString() : 'نشط'}</td>
+                            <td>
+                                <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
+                                   data-bs-toggle="modal" data-bs-target="#detailsPatientModal"></i>
+                            </td>
+                            <td>
+                                <button class="btn btn-primary btn-sm" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour || null})" 
+                                        data-bs-toggle="modal" data-bs-target="#updatePatientModal">تحديث</button>
+                            </td>
+                        `;
+                    });
+                } else {
+                    const row = managePatientsTableBody.insertRow();
+                    const cell = row.insertCell();
+                    cell.colSpan = 10;
+                    cell.textContent = 'لا يوجد مرضى لعرضهم حالياً.';
+                    cell.style.textAlign = 'center';
+                }
             } catch (error) {
-                console.error(error);
-                showMessage('حدث خطأ أثناء تحميل المرضى', 'error');
+                console.error("Error loading patients for admin:", error);
+                showMessage('حدث خطأ أثناء تحميل قائمة المرضى', 'error');
             }
         }
 

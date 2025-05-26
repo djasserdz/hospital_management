@@ -363,7 +363,7 @@ loginForm.addEventListener('submit', async function(event) {
             }, 3000);
         }
     } catch (error) {
-        loginMessage.textContent =error.response.data.message;
+        loginMessage.textContent =error.response;
         loginMessage.className = 'message error animate__animated animate__fadeIn';
         loginMessage.style.display = 'block';
         setTimeout(() => {
