@@ -245,6 +245,14 @@
             <div class="card">
                 <h3>إدارة المرضى</h3>
                 <div id="patientMessage" class="message" style="display: none;"></div>
+                <div class="mb-3">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+                        <i class="bi bi-person-plus-fill"></i> إضافة مريض جديد
+                    </button>
+                    <button class="btn btn-info ms-2" data-bs-toggle="modal" data-bs-target="#newStayModal">
+                        <i class="bi bi-door-open-fill"></i> إقامة جديدة لمريض حالي
+                    </button>
+                </div>
                 <table id="managePatientsTable" class="table table-striped table-hover">
                     <thead>
                         <tr>
@@ -367,6 +375,64 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
                     <button type="button" class="btn btn-primary" id="addButton">إضافة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Stay Modal -->
+    <div class="modal fade" id="newStayModal" tabindex="-1" aria-labelledby="newStayModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newStayModalLabel">إضافة إقامة جديدة لمريض حالي</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newStayForm" class="row g-3">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="searchExistingPatient">ابحث عن المريض (بالاسم أو رقم التعريف)</label>
+                                <input type="text" class="form-control" id="searchExistingPatient" placeholder="ابدأ الكتابة للبحث...">
+                                <div id="existingPatientsList" class="list-group mt-2" style="max-height: 200px; overflow-y: auto;">
+                                    <!-- Search results will appear here -->
+                                </div>
+                                <input type="hidden" id="selectedExistingPatientId" name="id_patient">
+                                <p id="selectedPatientInfo" class="mt-2"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="newStayAdmissionDate">تاريخ الدخول</label>
+                                <input type="date" class="form-control" id="newStayAdmissionDate" name="admission_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="newStayDepartment">القسم</label>
+                                <select class="form-select" id="newStayDepartment" name="id_service" required>
+                                    <option value="">اختر القسم</option>
+                                    <!-- Options will be loaded by JS if needed, or can be static -->
+                                    <option value="1">Cardiology</option>
+                                    <option value="2">Neurology</option>
+                                    <option value="3">Pediatrics</option>
+                                    <option value="4">Orthopedics</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="newStayAvailableRooms">الغرفة المتاحة</label>
+                                <select class="form-select" id="newStayAvailableRooms" name="id_chambre" required>
+                                    <option value="">اختر القسم أولاً</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-primary" id="createNewStayButton">إنشاء إقامة</button>
                 </div>
             </div>
         </div>
@@ -514,12 +580,25 @@
         const addPatientModal = document.getElementById('addPatientModal');
         const updatePatientModal = document.getElementById('updatePatientModal');
         const detailsPatientModal = document.getElementById('detailsPatientModal');
+        const newStayModal = document.getElementById('newStayModal');
         const patientMessage = document.getElementById('patientMessage');
         let selectedPatientId = null;
         let selectedSejourId = null;
         const sidebar = document.querySelector('.sidebar');
         const toggleSidebarBtn = document.getElementById('toggleSidebar');
         const content = document.querySelector('.content');
+
+        // For New Stay Modal
+        const searchExistingPatientInput = document.getElementById('searchExistingPatient');
+        const existingPatientsListDiv = document.getElementById('existingPatientsList');
+        const selectedExistingPatientIdInput = document.getElementById('selectedExistingPatientId');
+        const selectedPatientInfoP = document.getElementById('selectedPatientInfo');
+        const newStayDepartmentSelect = document.getElementById('newStayDepartment');
+        const newStayAvailableRoomsSelect = document.getElementById('newStayAvailableRooms');
+        const createNewStayButton = document.getElementById('createNewStayButton');
+
+        let searchTimeoutExistingPatient;
+        let allPatientsCache = []; // Cache for patient search
 
         function showMessage(text, type) {
             patientMessage.innerHTML = `<i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}"></i> ${text}`;
@@ -565,6 +644,43 @@
             }
         }
 
+        async function loadAllPatientsForSearchCache() {
+            try {
+                const response = await axios.get("/admin/patients/all"); // Assuming this fetches all details including id_patient
+                allPatientsCache = response.data.map(p => ({ id: p.id_patient, name: p.full_name, nin: p.NIN }));
+            } catch (error) {
+                console.error("Error loading patients for cache:", error);
+                allPatientsCache = []; // Reset cache on error
+            }
+        }
+        
+        function searchAndDisplayExistingPatients(searchTerm) {
+            existingPatientsListDiv.innerHTML = ''; // Clear previous results
+            if (!searchTerm) return;
+
+            const filteredPatients = allPatientsCache.filter(patient => 
+                patient.name.toLowerCase().includes(searchTerm) || (patient.nin && patient.nin.includes(searchTerm))
+            );
+
+            if (filteredPatients.length > 0) {
+                filteredPatients.slice(0, 10).forEach(patient => { // Limit to 10 results for display
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.classList.add('list-group-item', 'list-group-item-action');
+                    item.textContent = `${patient.name} (NIN: ${patient.nin || 'N/A'})`;
+                    item.onclick = () => {
+                        selectedExistingPatientIdInput.value = patient.id;
+                        selectedPatientInfoP.textContent = `المريض المختار: ${patient.name} (ID: ${patient.id})`;
+                        existingPatientsListDiv.innerHTML = ''; // Clear list after selection
+                        searchExistingPatientInput.value = patient.name; // Optionally fill input
+                    };
+                    existingPatientsListDiv.appendChild(item);
+                });
+            } else {
+                existingPatientsListDiv.innerHTML = '<p class="list-group-item">لا يوجد مرضى مطابقون.</p>';
+            }
+        }
+
         async function loadManagePatients() {
             try {
                 const response = await axios.get("/admin/patients/all");
@@ -588,14 +704,24 @@
                             <td>${patient.service_name || 'غير محدد'}</td> 
                             <td>${patient.room_number || 'لا يوجد'}</td>
                             <td>${patient.Date_entree ? new Date(patient.Date_entree).toLocaleDateString() : '-'}</td>
-                            <td>${patient.Date_sortiee ? new Date(patient.Date_sortiee).toLocaleDateString() : 'نشط'}</td>
+                            <td>${patient.Date_sortiee ? new Date(patient.Date_sortiee).toLocaleDateString() : '<span class="badge bg-success">نشط</span>'}</td>
                             <td>
                                 <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
                                    data-bs-toggle="modal" data-bs-target="#detailsPatientModal"></i>
                             </td>
                             <td>
-                                <button class="btn btn-primary btn-sm" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour || null})" 
-                                        data-bs-toggle="modal" data-bs-target="#updatePatientModal">تحديث</button>
+                                <button class="btn btn-info btn-sm me-1" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour || null})" 
+                                        data-bs-toggle="modal" data-bs-target="#updatePatientModal" title="تحديث بيانات المريض">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                ${patient.Date_sortiee ? 
+                                    `<button class="btn btn-success btn-sm" onclick="reactivateStay(${patient.id_sejour || null})" title="إعادة تفعيل الإقامة">
+                                        <i class="bi bi-arrow-clockwise"></i> تفعيل
+                                     </button>` : 
+                                    `<button class="btn btn-warning btn-sm" onclick="endStay(${patient.id_sejour || null})" title="إنهاء الإقامة">
+                                        <i class="bi bi-calendar-x"></i> إنهاء
+                                     </button>`
+                                }
                             </td>
                         `;
                     });
@@ -830,6 +956,9 @@
 
         addButton.addEventListener('click', addPatient);
         updateButton.addEventListener('click', saveUpdatedPatient);
+        if (createNewStayButton) {
+            createNewStayButton.addEventListener('click', createNewStay);
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("addDepartment").addEventListener("change", async function() {
@@ -839,9 +968,124 @@
             document.getElementById("updateDepartment").addEventListener("change", async function() {
                 await loadRoomsForDepartment(this.value, "updateAvailableRooms");
             });
+            
+            // For New Stay Modal
+            if (newStayDepartmentSelect) {
+                newStayDepartmentSelect.addEventListener("change", async function() {
+                    await loadRoomsForDepartment(this.value, "newStayAvailableRooms");
+                });
+            }
+            if(searchExistingPatientInput) {
+                searchExistingPatientInput.addEventListener('input', () => {
+                    clearTimeout(searchTimeoutExistingPatient);
+                    searchTimeoutExistingPatient = setTimeout(() => {
+                        searchAndDisplayExistingPatients(searchExistingPatientInput.value.trim().toLowerCase());
+                    }, 500); // Debounce search
+                });
+                 // Pre-load patients for search on modal show or page load
+                newStayModal.addEventListener('show.bs.modal', async () => {
+                    if (allPatientsCache.length === 0) { // Load only if cache is empty
+                       await loadAllPatientsForSearchCache();
+                    }
+                    // Clear previous selection
+                    document.getElementById('newStayForm').reset();
+                    selectedPatientInfoP.textContent = '';
+                    selectedExistingPatientIdInput.value = '';
+                    existingPatientsListDiv.innerHTML = '';
+                    newStayAvailableRoomsSelect.innerHTML = '<option value="">اختر القسم أولاً</option>'; // Reset rooms
+                });
+            }
 
             loadManagePatients();
         });
+
+        async function reactivateStay(sejourId) {
+            if (!sejourId) {
+                showMessage('لم يتم تحديد الإقامة بشكل صحيح.', 'error');
+                return;
+            }
+            if (confirm('هل أنت متأكد أنك تريد إعادة تفعيل هذه الإقامة؟')) {
+                try {
+                    const response = await axios.put('/sejour/status', {
+                        id_sejour: sejourId,
+                        Date_sortie: null 
+                    });
+                    if (response.status === 200) {
+                        showMessage('تم إعادة تفعيل الإقامة بنجاح.', 'success');
+                        loadManagePatients(); 
+                    } else {
+                        showMessage(response.data.message || 'فشل في إعادة تفعيل الإقامة.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error reactivating stay:', error);
+                    showMessage(error.response?.data?.message || 'حدث خطأ أثناء إعادة تفعيل الإقامة.', 'error');
+                }
+            }
+        }
+
+        async function endStay(sejourId) {
+            if (!sejourId) {
+                showMessage('لم يتم تحديد الإقامة بشكل صحيح.', 'error');
+                return;
+            }
+            if (confirm('هل أنت متأكد أنك تريد إنهاء هذه الإقامة؟')) {
+                try {
+                    const response = await axios.put('/sejour/status', {
+                        id_sejour: sejourId,
+                        Date_sortie: new Date().toISOString().split('T')[0] // Sets current date as exit date
+                    });
+                    if (response.status === 200) {
+                        showMessage('تم إنهاء الإقامة بنجاح.', 'success');
+                        loadManagePatients();
+                    } else {
+                        showMessage(response.data.message || 'فشل في إنهاء الإقامة.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error ending stay:', error);
+                    showMessage(error.response?.data?.message || 'حدث خطأ أثناء إنهاء الإقامة.', 'error');
+                }
+            }
+        }
+
+        // Functions for new stay
+        async function createNewStay() {
+            const patientId = selectedExistingPatientIdInput.value;
+            const admissionDate = document.getElementById('newStayAdmissionDate').value;
+            const departmentId = newStayDepartmentSelect.value;
+            const roomId = newStayAvailableRoomsSelect.value;
+
+            if (!patientId) {
+                showMessage('الرجاء اختيار مريض أولاً.', 'error');
+                return;
+            }
+            if (!admissionDate || !departmentId || !roomId) {
+                showMessage('يرجى ملء جميع حقول الإقامة الجديدة (تاريخ الدخول، القسم، الغرفة).', 'error');
+                return;
+            }
+
+            try {
+                const response = await axios.post('/sejour/new', {
+                    id_patient: parseInt(patientId),
+                    Date_entree: admissionDate,
+                    id_chambre: parseInt(roomId)
+                });
+
+                if (response.status === 200 || response.status === 201) {
+                    showMessage(response.data.message || 'تم إنشاء الإقامة الجديدة بنجاح!', 'success');
+                    loadManagePatients(); // Refresh the main patient list
+                    const modal = bootstrap.Modal.getInstance(newStayModal);
+                    modal.hide();
+                    document.getElementById('newStayForm').reset();
+                    selectedPatientInfoP.textContent = '';
+                    selectedExistingPatientIdInput.value = '';
+                } else {
+                    showMessage(response.data.message || 'فشل في إنشاء الإقامة الجديدة.', 'error');
+                }
+            } catch (error) {
+                console.error('Error creating new stay:', error);
+                showMessage(error.response?.data?.message || 'حدث خطأ أثناء إنشاء الإقامة الجديدة.', 'error');
+            }
+        }
     </script>
 </body>
 

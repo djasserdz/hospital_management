@@ -55,6 +55,9 @@ function routing($method, $url,$queryParams){
             case '/admin/patients/all':
                 require './routes/Admin.php';
             break;
+            case '/sejour/modal-details':
+                require './routes/Sejour.php';
+            break;
             default:
                 http_response_code(404);
                 echo "404 - Page not found";
@@ -72,6 +75,8 @@ function routing($method, $url,$queryParams){
                 require "./routes/Suivi.php";
             case '/prescription':
                 require './routes/Prescription.php';
+            case '/sejour/new':
+                require './routes/Sejour.php';
             break;
             default:
                 http_response_code(404);

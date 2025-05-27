@@ -74,22 +74,68 @@ if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'room' && $request_met
 } else if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'status' && $request_method === 'PUT') {
     $data = json_decode(file_get_contents("php://input"));
 
-    if (!empty($data->id_sejour) && !empty($data->Date_sortie)) {
-        if ($sejour->updateStatus($data->id_sejour, $data->Date_sortie)) {
+    // Allow Date_sortie to be null for activating a sejour
+    if (!empty($data->id_sejour) && isset($data->Date_sortie)) { 
+        // Date_sortie can be a date string for discharge, or null for activation
+        $date_sortie_to_pass = $data->Date_sortie;
+
+        if ($sejour->updateStatus($data->id_sejour, $date_sortie_to_pass)) {
             http_response_code(200);
-            echo json_encode(array("message" => "Sejour status updated successfully."));
+            $action = ($date_sortie_to_pass === null) ? "activated" : "updated";
+            echo json_encode(array("message" => "Sejour status " . $action . " successfully."));
         } else {
             http_response_code(503);
             echo json_encode(array("message" => "Unable to update sejour status. Check server logs."));
         }
     } else {
         http_response_code(400);
-        echo json_encode(array("message" => "Unable to update status. id_sejour and Date_sortie are required."));
+        echo json_encode(array("message" => "Unable to update status. id_sejour and Date_sortie (can be null) are required."));
+    }
+} else if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'new' && $request_method === 'POST') {
+    $data = json_decode(file_get_contents("php://input"));
+    error_log("POST /sejour/new received data: " . print_r($data, true));
+
+    if (
+        !empty($data->id_patient) &&
+        !empty($data->Date_entree) &&
+        isset($data->id_chambre) // id_chambre can be 0 or null if no room assigned initially, but must be present
+    ) {
+        // Basic validation for date format can be added here if needed
+        if ($sejour->createStayForExistingPatient($data->id_patient, $data->id_chambre, $data->Date_entree)) {
+            http_response_code(201);
+            echo json_encode(array("message" => "New stay created successfully for existing patient."));
+        } else {
+            http_response_code(503);
+            echo json_encode(array("message" => "Unable to create new stay. Check server logs."));
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(array("message" => "Unable to create new stay. id_patient, Date_entree, and id_chambre are required."));
     }
 } else {
     if ($request_method === 'PUT') {
         http_response_code(404);
         echo json_encode(array("message" => "PUT endpoint not found for sejour."));
     }
+}
+
+// Handler for GET /sejour/modal-details
+if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'modal-details' && $request_method === 'GET') {
+    if (empty($_GET['id_sejour'])) {
+        http_response_code(400);
+        echo json_encode(["message" => "Missing id_sejour parameter for modal details."]);
+        exit;
+    }
+    $id_sejour = $_GET['id_sejour'];
+    $details = $sejour->getCompositeDetailsForModal($id_sejour);
+
+    if ($details !== false) {
+        http_response_code(200);
+        echo json_encode($details);
+    } else {
+        http_response_code(500);
+        echo json_encode(["message" => "Failed to retrieve details for modal. Check server logs."]);
+    }
+    exit; // Ensure script exits after handling this route
 }
 ?> 

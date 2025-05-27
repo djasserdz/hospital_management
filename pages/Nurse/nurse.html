@@ -1043,10 +1043,10 @@ function displayPatients(table, patientsList, isManageSection) {
                        title="تغيير الغرفة"></i>
                 </td>
                 <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
-                <td>${isActive}</td>
+                <td>${patient.etat_santee || '-'}</td>
                 <td class="notes-cell">
                     <i class="bi bi-eye notes-icon"
-                       onclick="viewRecommendations(${patientId})"
+                       onclick="viewRecommendations(${sejourId})"
                        title="عرض التوصيات"
                        data-bs-toggle="modal"
                        data-bs-target="#viewRecommendationsModal"></i>
@@ -1221,6 +1221,7 @@ async function saveUpdatedPatient() {
         };
 
         const suiviResponse = await axios.post('/suivis', suiviData);
+        console.log("suiviResponse:", suiviResponse);
 
         if (suiviResponse.status === 200 || suiviResponse.status === 201) {
             // Reload patient data
@@ -1271,34 +1272,21 @@ async function togglePatientStatus(sejourId) {
 async function viewRecommendations(sejourId) {
     try {
         if (!sejourId) {
-            throw new Error('لم يتم تحديد الإقامة');
+            showMessage('لم يتم تحديد الإقامة بشكل صحيح.', 'error');
+            return;
         }
+        console.log("viewRecommendations called for sejourId:", sejourId);
 
-        console.log("sejourId:", sejourId);
-
-        // Fetch prescriptions
-        const prescriptionsResponse = await axios.get('/prescription', {
+        // Fetch composite details (prescriptions and latest suivi)
+        const response = await axios.get('/sejour/modal-details', {
             params: { id_sejour: sejourId }
         });
-        console.log("prescriptionsResponse.data:", prescriptionsResponse.data);
+        
+        console.log("Modal details response.data:", response.data);
+        const modalData = response.data;
 
-        const prescriptions = Array.isArray(prescriptionsResponse.data)
-            ? prescriptionsResponse.data
-            : (prescriptionsResponse.data ? [prescriptionsResponse.data] : []);
-
-        console.log("prescriptions array:", prescriptions);
-
-        // Fetch sejour details
-        let sejourDetails = {};
-        try {
-            const sejourResponse = await axios.get('/patient/detail', {
-                params: { id: sejourId }
-            });
-            console.log("sejourResponse.data:", sejourResponse.data);
-            sejourDetails = sejourResponse.data || {};
-        } catch (sejourError) {
-            console.warn('Could not load sejour details:', sejourError);
-        }
+        const prescriptions = Array.isArray(modalData.prescriptions) ? modalData.prescriptions : [];
+        const latestSuivi = modalData.latest_suivi;
 
         const content = document.getElementById('viewRecommendationsContent');
         if (!content) {
@@ -1306,13 +1294,32 @@ async function viewRecommendations(sejourId) {
             return;
         }
 
+        let suiviInfoHtml = '';
+        if (latestSuivi) {
+            let formattedSuiviDate = '-';
+            if (latestSuivi.last_suivi_date) {
+                const date = new Date(latestSuivi.last_suivi_date);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                formattedSuiviDate = `${year}-${month}-${day} ${hours}:${minutes}`;
+            }
+            suiviInfoHtml = `
+                <div class="update-info mb-3">
+                    <strong>آخر ملاحظة بتاريخ:</strong> ${formattedSuiviDate}<br>
+                    <strong>بواسطة الممرض(ة):</strong> ${latestSuivi.last_suivi_by_nurse || '-'}
+                </div>
+                <h6>آخر ملاحظة (Remarque):</h6>
+                <p class="border p-2 rounded bg-light">${latestSuivi.Remarque || 'لا توجد ملاحظات مسجلة.'}</p>
+            `;
+        }
+
         content.innerHTML = `
-            <div class="update-info">
-                <strong>آخر تحديث:</strong> ${sejourDetails.Updated_at ? new Date(sejourDetails.Updated_at).toLocaleString('ar-SA') : '-'}<br>
-                <strong>بواسطة:</strong> ${sejourDetails.nurse_name || '-'}
-            </div>
-            <h5>الإجراءات المعمول بها:</h5>
-            <h6>الأدوية:</h6>
+            ${suiviInfoHtml}
+            <hr>
+            <h5>الأدوية الموصوفة:</h5>
             <div class="prescription-list">
                 ${prescriptions.length > 0
                     ? prescriptions.map(p => `
@@ -1323,19 +1330,22 @@ async function viewRecommendations(sejourId) {
                             <strong>التعليمات:</strong> ${p.instructions || '-'}
                         </div>
                     `).join('')
-                    : '<p>لا توجد أدوية محددة</p>'
+                    : '<p>لا توجد أدوية محددة لهذه الإقامة.</p>'
                 }
             </div>
             `;
 
+        // Update modal title if needed (e.g., include patient name if available from another source or added to modalData)
         const modalTitle = document.getElementById('viewRecommendationsModalLabel');
         if (modalTitle) {
-            modalTitle.textContent = `التوصيات الطبية ${sejourDetails.patient_name ? 'لـ ' + sejourDetails.patient_name : ''}`;
+            // To get patient name, you might need to pass it to viewRecommendations
+            // or include it in the response from /sejour/modal-details if practical.
+            modalTitle.textContent = `التوصيات والملاحظات الطبية للإقامة رقم: ${sejourId}`;
         }
 
     } catch (error) {
-        console.error('Error loading recommendations:', error);
-        showMessage('حدث خطأ أثناء تحميل التوصيات', 'error');
+        console.error('Error loading recommendations/suivi details:', error);
+        showMessage(error.response?.data?.message || 'حدث خطأ أثناء تحميل التفاصيل.', 'error');
     }
 }
 
