@@ -74,22 +74,41 @@ if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'room' && $request_met
 } else if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'status' && $request_method === 'PUT') {
     $data = json_decode(file_get_contents("php://input"));
 
-    // Allow Date_sortie to be null for activating a sejour
-    if (!empty($data->id_sejour) && isset($data->Date_sortie)) { 
-        // Date_sortie can be a date string for discharge, or null for activation
-        $date_sortie_to_pass = $data->Date_sortie;
+    // Ensure id_sejour, action, and id_chambre are provided
+    if (!empty($data->id_sejour) && !empty($data->action) && isset($data->id_chambre)) {
+        $id_sejour = $data->id_sejour;
+        $action = $data->action;
+        $id_chambre = $data->id_chambre; // The room ID associated with this sejour for discharge/reactivation
 
-        if ($sejour->updateStatus($data->id_sejour, $date_sortie_to_pass)) {
-            http_response_code(200);
-            $action = ($date_sortie_to_pass === null) ? "activated" : "updated";
-            echo json_encode(array("message" => "Sejour status " . $action . " successfully."));
+        if ($action === 'discharge') {
+            $date_sortie = !empty($data->Date_sortie) ? $data->Date_sortie : date('Y-m-d H:i:s');
+            // For discharge, $id_chambre is the room to be vacated.
+            if ($sejour->dischargePatient($id_sejour, $date_sortie, $id_chambre)) {
+                http_response_code(200);
+                echo json_encode(array("message" => "Sejour discharged successfully."));
+            } else {
+                http_response_code(503);
+                echo json_encode(array("message" => "Unable to discharge sejour. Check server logs."));
+            }
+        } elseif ($action === 'reactivate') {
+            // For reactivation, $id_chambre is the room to re-occupy.
+            $result = $sejour->reactivateSejour($id_sejour, $id_chambre);
+            if ($result['success']) {
+                http_response_code(200);
+                echo json_encode(array("message" => $result['message']));
+            } else {
+                // Use 400 for client-side issues (e.g., room not available), 503 for server-side
+                $statusCode = (strpos($result['message'], 'الغرفة') !== false || strpos($result['message'], 'تحديد غرفة') !== false) ? 400 : 503;
+                http_response_code($statusCode);
+                echo json_encode(array("message" => $result['message']));
+            }
         } else {
-            http_response_code(503);
-            echo json_encode(array("message" => "Unable to update sejour status. Check server logs."));
+            http_response_code(400);
+            echo json_encode(array("message" => "Invalid action specified. Must be 'discharge' or 'reactivate'."));
         }
     } else {
         http_response_code(400);
-        echo json_encode(array("message" => "Unable to update status. id_sejour and Date_sortie (can be null) are required."));
+        echo json_encode(array("message" => "Unable to update status. id_sejour, action, and id_chambre are required."));
     }
 } else if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'new' && $request_method === 'POST') {
     $data = json_decode(file_get_contents("php://input"));

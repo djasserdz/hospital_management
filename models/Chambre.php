@@ -35,7 +35,7 @@ class Chambre {
 
         if ($user_data && isset($user_data['id_service'])) {
             $this->id_service = $user_data['id_service'];
-            return $this->getAvailableByService();
+        return $this->getAvailableByService();
         } else {
             // User not found or user has no service_id, return empty array
             error_log("Nurse not found or no service ID for nurse ID: " . $id_nurse);

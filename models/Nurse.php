@@ -16,65 +16,57 @@ class Nurse {
 
    
 
-    public function getAllPatients() {
-        // Step 1: Get the service ID for the current nurse ($this->id_user must be set prior to calling this)
-        $find_service_query = "SELECT id_service FROM Users WHERE id = :id_user LIMIT 1";
-        $stmt_find_service = $this->conn->prepare($find_service_query);
-        
-        if ($stmt_find_service === false) {
-            error_log("Failed to prepare query to find nurse's service ID. SQL: " . $find_service_query . " Error: " . implode(" ", $this->conn->errorInfo()));
-            return [];
+    public function getAllPatients($id_infermier) {
+        // First, get the service ID for the nurse
+        $query1 = "SELECT id_service FROM Users WHERE id = :id_infermier AND role = 'nurse'";
+        $stmt1 = $this->conn->prepare($query1);
+        $stmt1->bindParam(':id_infermier', $id_infermier);
+        $stmt1->execute();
+        $nurse_data = $stmt1->fetch(PDO::FETCH_ASSOC);
+
+        if (!$nurse_data) {
+            error_log("Nurse not found or not a nurse: user_id " . $id_infermier);
+            return ["error" => "Nurse not found or not a nurse.", "data" => []];
         }
-        $stmt_find_service->bindParam(":id_user", $this->id_user, PDO::PARAM_INT);
-        
-        if (!$stmt_find_service->execute()) {
-            error_log("Failed to execute query to find nurse's service ID for nurse: " . $this->id_user . " Error: " . implode(" ", $stmt_find_service->errorInfo()));
-            return [];
-        }
-        
-        $nurse_data = $stmt_find_service->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$nurse_data || !isset($nurse_data['id_service'])) {
-            error_log("Nurse not found or no service ID for nurse: " . $this->id_user);
-            return [];
-        }
-        
         $actual_id_service = $nurse_data['id_service'];
 
-        // Step 2: Fetch patients based on the nurse's actual service ID and with active sejours, including latest etat_santee
-        $query = "SELECT P.id_patient, P.full_name, P.NIN, P.age, P.sex,
-                         Sj.id_sejour, Sj.Date_entree, Sj.Date_sortiee,
-                         C.Numero_cr as room_number, C.id_chambre as room_id,
-                         Svcs.nom_service as service_name, Svcs.id_service as service_id,
-                         LatestSuivi.etat_santee
-                  FROM Patients P
-                  JOIN Sejour Sj ON Sj.id_patient = P.id_patient
-                  JOIN Chambres C ON C.id_chambre = Sj.id_chambre
-                  JOIN Services Svcs ON Svcs.id_service = C.id_service
-                  LEFT JOIN Suivi LatestSuivi ON LatestSuivi.id_suivi = (
-                      SELECT s_inner.id_suivi
-                      FROM Suivi s_inner
-                      WHERE s_inner.id_sejour = Sj.id_sejour
-                      ORDER BY s_inner.Date_observation DESC, s_inner.id_suivi DESC
-                      LIMIT 1
-                  )
-                  WHERE Svcs.id_service = :actual_id_service AND Sj.Date_sortiee IS NULL";
-
-        $stmt_patients = $this->conn->prepare($query);
-
-        if ($stmt_patients === false) {
-            error_log("Failed to prepare query to fetch patients. SQL: " . $query . " Error: " . implode(" ", $this->conn->errorInfo()));
-            return [];
+        if (!$actual_id_service) {
+            error_log("Nurse service ID not found for user_id: " . $id_infermier);
+            return ["error" => "Nurse service ID not found.", "data" => []];
         }
 
-        $stmt_patients->bindParam(':actual_id_service', $actual_id_service, PDO::PARAM_INT);
+        // Then, get all patients in that service with their current sejour and room
+        $query2 = "SELECT 
+                        P.*, 
+                        S.id_sejour, 
+                        S.Date_entree, 
+                        S.Date_sortiee,
+                        CH.id_chambre AS sejour_id_chambre, 
+                        CH.numero_cr as room_number, 
+                        SRV.nom_service as service_name,
+                        P.full_name
+                    FROM Patients P
+                    JOIN Sejour S ON P.id_patient = S.id_patient
+                    JOIN Chambres CH ON S.id_chambre = CH.id_chambre
+                    JOIN Services SRV ON CH.id_service = SRV.id_service
+                    WHERE SRV.id_service = :id_service AND S.id_sejour IS NOT NULL
+                    ORDER BY S.Date_entree DESC";
+
+        $stmt2 = $this->conn->prepare($query2);
+        $stmt2->bindParam(':id_service', $actual_id_service, PDO::PARAM_INT);
         
-        if (!$stmt_patients->execute()) {
-            error_log("Failed to execute query to fetch patients for service ID: " . $actual_id_service . " Error: " . implode(" ", $stmt_patients->errorInfo()));
-            return [];
+        if ($stmt2->execute()) {
+            $patients = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($patients)) {
+                // Return an empty array if no patients are found, but indicate success.
+                return ["message" => "No patients found for this service.", "data" => []];
+            }
+            return ["data" => $patients];
+        } else {
+            $errorInfo = $stmt2->errorInfo();
+            error_log("Error fetching patients: " . implode(", ", $errorInfo));
+            return ["error" => "Error fetching patients: " . implode(", ", $errorInfo), "data" => []];
         }
-
-        return $stmt_patients->fetchAll(PDO::FETCH_ASSOC);
     }
 
     

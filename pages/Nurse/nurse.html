@@ -885,80 +885,6 @@ function selectRoomForPatient(room) {
     });
 }
 
-// Keep your original selectRoom function for other uses
-function selectRoom(room) {
-    if (!selectedSejourId) {
-        showMessage('خطأ في تحديد الإقامة', 'error');
-        return;
-    }
-
-    const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!nurse || !nurse.id) {
-        showMessage('خطأ في بيانات المستخدم', 'error');
-        return;
-    }
-
-    // Update room assignment
-    axios.put('/sejour/room', {
-        id_sejour: selectedSejourId,
-        id_chambre: room.id_chambre || room.room_id,
-        id_agent: nurse.id
-    })
-    .then(response => {
-        if (response.status === 200) {
-            loadManagePatients();
-            showMessage('تم تحديث رقم الغرفة بنجاح', 'success');
-        } else {
-            showMessage('فشل في تحديث الغرفة', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error updating room:', error);
-        showMessage('حدث خطأ أثناء التحديث', 'error');
-    })
-    .finally(() => {
-        const modal = bootstrap.Modal.getInstance(selectRoomModalAdd);
-        if (modal) modal.hide();
-    });
-}
-
-
-function selectRoom(room) {
-    if (!selectedSejourId) {
-        showMessage('خطأ في تحديد الإقامة', 'error');
-        return;
-    }
-
-    const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!nurse || !nurse.id) {
-        showMessage('خطأ في بيانات المستخدم', 'error');
-        return;
-    }
-
-    // Update room assignment
-    axios.put('/sejour/room', {
-        id_sejour: selectedSejourId,
-        id_chambre: room.id_chambre || room.room_id,
-        id_agent: nurse.id
-    })
-    .then(response => {
-        if (response.status === 200) {
-            loadManagePatients();
-            showMessage('تم تحديث رقم الغرفة بنجاح', 'success');
-        } else {
-            showMessage('فشل في تحديث الغرفة', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error updating room:', error);
-        showMessage('حدث خطأ أثناء التحديث', 'error');
-    })
-    .finally(() => {
-        const modal = bootstrap.Modal.getInstance(selectRoomModalAdd);
-        if (modal) modal.hide();
-    });
-}
-
 // Patient Data Loading
 async function loadManagePatients() {
     try {
@@ -1022,25 +948,55 @@ function displayPatients(table, patientsList, isManageSection) {
     patientsList.forEach(patient => {
         const row = table.insertRow();
 
-        const isActive = (patient.Date_sortiee) ? 'غير نشط' : 'نشط'; // Use Date_sortiee from our PHP alias
         const patientName = patient.full_name || '-';
-        // Use the alias 'room_number' from the PHP model
         const roomNumberToDisplay = patient.room_number || '-'; 
         const patientId = patient.id_patient;
         const sejourId = patient.id_sejour;
-        // Use the alias 'service_name' from the PHP model
-        const serviceNameToDisplay = patient.service_name || '-'; 
+        const serviceNameToDisplay = patient.service_name || '-';
+        const dischargeDate = patient.Date_sortiee;
+        // The room ID associated with the sejour, needed for reactivation.
+        // Ensure this is being sent from the backend in Nurse->getAllPatients()
+        const sejourChambreId = patient.sejour_id_chambre || patient.room_id; 
+
+        let statusText;
+        let actionButtonHtml;
+
+        if (dischargeDate) {
+            statusText = `تم الخروج بتاريخ ${new Date(dischargeDate).toLocaleDateString()}`;
+            actionButtonHtml = `<button class="btn btn-success btn-sm"
+                                       onclick="updatePatientStayStatus(${sejourId}, 'reactivate', ${sejourChambreId})">
+                                   إعادة التفعيل
+                               </button>`;
+        } else {
+            statusText = 'نشط';
+            actionButtonHtml = `<button class="btn btn-warning btn-sm"
+                                       onclick="updatePatientStayStatus(${sejourId}, 'discharge', ${sejourChambreId})">
+                                   إنهاء الإقامة
+                               </button>`;
+        }
 
         if (isManageSection) {
-            // Adjust colspan if needed based on actual columns for managePatientsTable
-            // Current managePatientsTable seems to have: Name, Room, Sex, Status, Recommendations, Details, Update action -> 7 columns
+            let actionButtons = `
+                <button class="btn btn-primary btn-sm"
+                        onclick="openUpdateModal(${patientId}, ${sejourId})"
+                        data-bs-toggle="modal"
+                        data-bs-target="#updatePatientModal">
+                    تحديث
+                </button>
+            `;
+            // Add discharge button for active patients (no dischargeDate)
+            if (!dischargeDate) {
+                actionButtons += `
+                    <button class="btn btn-warning btn-sm ms-2"
+                            onclick="updatePatientStayStatus(${sejourId}, 'discharge', ${sejourChambreId})">
+                        إنهاء الإقامة
+                    </button>
+                `;
+            }
             row.innerHTML = `
                 <td>${patientName}</td>
                 <td class="room-cell">
                     ${roomNumberToDisplay}
-                    <i class="bi bi-pencil-square room-icon"
-                       onclick="openRoomSelection(${sejourId})"
-                       title="تغيير الغرفة"></i>
                 </td>
                 <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
                 <td>${patient.etat_santee || '-'}</td>
@@ -1059,33 +1015,18 @@ function displayPatients(table, patientsList, isManageSection) {
                        data-bs-target="#viewPatientDetailsModal"></i>
                 </td>
                 <td>
-                    <button class="btn btn-primary btn-sm"
-                            onclick="openUpdateModal(${patientId}, ${sejourId})"
-                            data-bs-toggle="modal"
-                            data-bs-target="#updatePatientModal">
-                        تحديث
-                    </button>
+                    ${actionButtons}
                 </td>
             `;
         } else { // This is for allPatientsTable
-             // Adjust colspan if needed based on actual columns for allPatientsTable
-             // Current allPatientsTable seems to have: Name, NIN, Room, Sex, Service, Status, Discharge Action -> 7 columns
             row.innerHTML = `
                 <td>${patientName}</td>
                 <td>${patient.NIN || '-'}</td>
                 <td>${roomNumberToDisplay}</td>
                 <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
                 <td>${serviceNameToDisplay}</td>
-                <td>${isActive}</td>
-                <td>
-                    ${(patient.Date_sortiee)
-                        ? '<span class="text-muted">تم الخروج</span>'
-                        : `<button class="btn btn-warning btn-sm"
-                                   onclick="togglePatientStatus(${sejourId})">
-                               إنهاء الإقامة
-                           </button>`
-                    }
-                </td>
+                <td>${statusText}</td>
+                <td>${actionButtonHtml}</td>
             `;
         }
     });
@@ -1244,28 +1185,59 @@ async function saveUpdatedPatient() {
 }
 
 
-async function togglePatientStatus(sejourId) {
-    if (!sejourId) {
-        showMessageAll('خطأ في تحديد الإقامة', 'error');
+async function updatePatientStayStatus(sejourId, action, chambreId) {
+    if (!sejourId || !action || (action === 'reactivate' && !chambreId)) {
+        let missingParam = !sejourId ? 'الإقامة' : (!action ? 'الإجراء' : 'الغرفة');
+        showMessageAll(`خطأ في تحديد ${missingParam}`, 'error');
+        console.error('Missing parameters for updatePatientStayStatus:', {sejourId, action, chambreId});
         return;
     }
 
     try {
-        const response = await axios.put('/sejour/status', {
+        let finalChambreId = chambreId;
+        if (action === 'reactivate') {
+            // Fetch available rooms for the nurse
+            const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
+            if (!nurse || !nurse.id) {
+                showMessageAll('خطأ في بيانات المستخدم', 'error');
+                return;
+            }
+            const roomsResponse = await axios.get('/nurse/room', { params: { nurse_id: nurse.id } });
+            const rooms = roomsResponse.data;
+            if (!Array.isArray(rooms) || rooms.length === 0) {
+                showMessageAll('لا توجد غرف متاحة لإعادة التفعيل', 'error');
+                return;
+            }
+            finalChambreId = rooms[0].id_chambre || rooms[0].room_id;
+        }
+
+        const requestBody = {
             id_sejour: sejourId,
-            Date_sortie: new Date().toISOString().split('T')[0]
-        });
+            action: action,
+            id_chambre: finalChambreId
+        };
+
+        // For discharge, we might want to send the current date as Date_sortie
+        if (action === 'discharge') {
+            requestBody.Date_sortie = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('en-GB');
+        }
+
+        const response = await axios.put('/sejour/status', requestBody);
 
         if (response.status === 200) {
-            await loadManagePatients();
+            await loadManagePatients(); // Refresh both lists
             await loadAllPatients();
-            showMessageAll('تم إنهاء إقامة المريض بنجاح', 'success');
+            const successMessage = action === 'discharge' ? 'تم إنهاء إقامة المريض بنجاح' : 'تمت إعادة تفعيل إقامة المريض بنجاح';
+            showMessageAll(successMessage, 'success');
         } else {
-            throw new Error('فشل في تحديث حالة المريض');
+            // The backend should send a meaningful message in response.data.message
+            const errorMessage = response.data?.message || (action === 'discharge' ? 'فشل في تحديث حالة المريض' : 'فشل في إعادة تفعيل إقامة المريض');
+            throw new Error(errorMessage);
         }
     } catch (error) {
         console.error('Error toggling patient status:', error);
-        showMessageAll('حدث خطأ أثناء تغيير حالة المريض', 'error');
+        const displayMessage = error.response?.data?.message || error.message || 'حدث خطأ أثناء تغيير حالة المريض';
+        showMessageAll(displayMessage, 'error');
     }
 }
 

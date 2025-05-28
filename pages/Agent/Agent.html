@@ -265,7 +265,6 @@
                             <th>تاريخ الدخول</th>
                             <th>تاريخ الخروج</th>
                             <th>التفاصيل</th>
-                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -696,6 +695,28 @@
                 if (patients && patients.length > 0) {
                     patients.forEach(patient => {
                         const row = managePatientsTableBody.insertRow();
+                        const isDischarged = patient.Date_sortiee;
+                        let statusText;
+                        let actionButtonHtml;
+
+                        if (isDischarged) {
+                            statusText = `تم الخروج بتاريخ ${new Date(patient.Date_sortiee).toLocaleDateString()}`;
+                            // Pass patient.room_id which holds the original room of this sejour for reactivation
+                            actionButtonHtml = `<button class="btn btn-success btn-sm" 
+                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'reactivate', ${patient.room_id || null}, ${patient.service_id_for_room || null})" 
+                                               title="تجديد الإقامة">
+                                            <i class="bi bi-arrow-clockwise"></i> تجديد الاقامة
+                                        </button>`;
+                        } else {
+                            statusText = 'نشط';
+                            // Pass patient.room_id for discharge, as it's the room to be vacated
+                            actionButtonHtml = `<button class="btn btn-warning btn-sm" 
+                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'discharge', ${patient.room_id || null}, ${patient.service_id_for_room || null})" 
+                                               title="إنهاء الإقامة">
+                                            <i class="bi bi-calendar-x"></i> إنهاء الإقامة
+                                        </button>`;
+                        }
+
                         row.innerHTML = `
                             <td>${patient.full_name || '-'}</td>
                             <td>${patient.NIN || '-'}</td>
@@ -704,24 +725,19 @@
                             <td>${patient.service_name || 'غير محدد'}</td> 
                             <td>${patient.room_number || 'لا يوجد'}</td>
                             <td>${patient.Date_entree ? new Date(patient.Date_entree).toLocaleDateString() : '-'}</td>
-                            <td>${patient.Date_sortiee ? new Date(patient.Date_sortiee).toLocaleDateString() : '<span class="badge bg-success">نشط</span>'}</td>
+                            <td>${statusText}</td>
                             <td>
-                                <i class="bi bi-eye details-icon" onclick="showPatientDetails(${patient.id_patient})" 
-                                   data-bs-toggle="modal" data-bs-target="#detailsPatientModal"></i>
-                            </td>
-                            <td>
-                                <button class="btn btn-info btn-sm me-1" onclick="updatePatient(${patient.id_patient}, ${patient.id_sejour || null})" 
-                                        data-bs-toggle="modal" data-bs-target="#updatePatientModal" title="تحديث بيانات المريض">
-                                    <i class="bi bi-pencil-square"></i>
+                                ${actionButtonHtml}
+                                <button class="btn btn-info btn-sm" 
+                                        onclick="showPatientDetails(${patient.id_patient})" 
+                                        title="عرض التفاصيل">
+                                    <i class="bi bi-eye"></i>
                                 </button>
-                                ${patient.Date_sortiee ? 
-                                    `<button class="btn btn-success btn-sm" onclick="reactivateStay(${patient.id_sejour || null})" title="إعادة تفعيل الإقامة">
-                                        <i class="bi bi-arrow-clockwise"></i> تفعيل
-                                     </button>` : 
-                                    `<button class="btn btn-warning btn-sm" onclick="endStay(${patient.id_sejour || null})" title="إنهاء الإقامة">
-                                        <i class="bi bi-calendar-x"></i> إنهاء
-                                     </button>`
-                                }
+                                <button class="btn btn-primary btn-sm" 
+                                        onclick="openUpdatePatientModal(${patient.id_patient}, ${patient.id_sejour || null}, '${patient.full_name}', '${patient.NIN}', ${patient.age}, '${patient.sex}', '${patient.adress || ''}', '${patient.telephone || ''}', '${patient.groupage || ''}', ${patient.room_id || null}, '${patient.room_number || ''}')" 
+                                        title="تحديث بيانات المريض">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
                             </td>
                         `;
                     });
@@ -818,12 +834,14 @@
             }
         }
 
-        async function updatePatient(id, sejour_id) {
-            selectedPatientId = id;
-            selectedSejourId = sejour_id;
+        async function openUpdatePatientModal(id_patient, id_sejour, fullName, nin, age, sex, adress, telephone, groupage, room_id, room_number_unused) {
+            selectedPatientId = id_patient;
+            selectedSejourId = id_sejour; // This might be null if no active sejour, handle accordingly
 
             try {
-                const response = await axios.get(`/patient?id=${id}`);
+                // Fetch full patient details to ensure data is fresh and complete,
+                // especially for fields not passed in the function call or for dependent selects.
+                const response = await axios.get(`/patient?id=${id_patient}`);
                 const patient = response.data;
 
                 if (patient) {
@@ -831,24 +849,38 @@
                     document.getElementById('updateIdNumber').value = patient.NIN || '';
                     document.getElementById('updatePhoneNumber').value = patient.telephone || '';
                     document.getElementById('updateGender').value = patient.sex || '';
-                    document.getElementById('updateBirthDate').value = patient.birth_date || '';
+                    // Assuming birth_date comes from API in YYYY-MM-DD
+                    document.getElementById('updateBirthDate').value = patient.birth_date || ''; 
                     document.getElementById('updateBloodType').value = patient.groupage || '';
                     document.getElementById('updateadresse').value = patient.adress || '';
-                    document.getElementById('updateAdmissionDate').value = patient.Date_entree || '';
+                    // Date_entree for the current/latest sejour
+                    document.getElementById('updateAdmissionDate').value = patient.Date_entree || ''; 
                     
-                    document.getElementById('updateDepartment').value = patient.id_service || '';
-                    await loadRoomsForDepartment(patient.id_service, "updateAvailableRooms");
+                    const departmentSelect = document.getElementById('updateDepartment');
+                    departmentSelect.value = patient.service_id_for_room || ''; // service_id from the room
+
+                    // Load rooms for the department and then select the current room
+                    await loadRoomsForDepartment(patient.service_id_for_room, "updateAvailableRooms");
                     
+                    // Ensure the room selection happens after rooms are loaded
+                    // Use a small timeout if direct selection doesn't work due to async nature
                     setTimeout(() => {
                         document.getElementById('updateAvailableRooms').value = patient.id_chambre || '';
-                    }, 300);
+                    }, 300); // Adjust timeout if necessary
 
                     document.getElementById('updatePatientModalLabel').textContent =
                         `تحديث بيانات المريض: ${patient.full_name}`;
+                    
+                    // Show the modal
+                    var modal = new bootstrap.Modal(document.getElementById('updatePatientModal'));
+                    modal.show();
+
+                } else {
+                    showMessage('لم يتم العثور على بيانات المريض.', 'error');
                 }
             } catch (error) {
-                console.error(error);
-                showMessage('حدث خطأ أثناء تحميل بيانات المريض', 'error');
+                console.error("Error in openUpdatePatientModal:", error);
+                showMessage('حدث خطأ أثناء تحميل بيانات المريض للتحديث.', 'error');
             }
         }
 
@@ -933,7 +965,7 @@
                     document.getElementById('detailGender').textContent = patient.sex === 'homme' ? 'ذكر' : 'أنثى';
                     document.getElementById('detailBirthDate').textContent = patient.birth_date || '-';
                     document.getElementById('detailBloodType').textContent = patient.groupage || '-';
-                    document.getElementById('detailDepartment').textContent = patient.nom_service || '-';
+                    document.getElementById('detailDepartment').textContent = patient.service_name || '-';
                     document.getElementById('detailAdmissionDate').textContent = patient.Date_entree || '-';
                     document.getElementById('detailUpdatedAt').textContent = patient.Updated_at ? new Date(patient.Updated_at).toLocaleString('ar-SA') : '-';
                     document.getElementById('detailsPatientModalLabel').textContent = `تفاصيل المريض: ${patient.full_name}`;
@@ -999,51 +1031,65 @@
             loadManagePatients();
         });
 
-        async function reactivateStay(sejourId) {
-            if (!sejourId) {
-                showMessage('لم يتم تحديد الإقامة بشكل صحيح.', 'error');
+        async function toggleAgentStayStatus(sejourId, action, chambreId, serviceId) {
+            if (!sejourId || !action) {
+                showMessage('خطأ في تحديد الإقامة أو الإجراء', 'error');
+                console.error('Missing parameters for toggleAgentStayStatus:', { sejourId, action, chambreId, serviceId });
                 return;
             }
-            if (confirm('هل أنت متأكد أنك تريد إعادة تفعيل هذه الإقامة؟')) {
-                try {
-                    const response = await axios.put('/sejour/status', {
-                        id_sejour: sejourId,
-                        Date_sortie: null 
-                    });
-                    if (response.status === 200) {
-                        showMessage('تم إعادة تفعيل الإقامة بنجاح.', 'success');
-                        loadManagePatients(); 
-                    } else {
-                        showMessage(response.data.message || 'فشل في إعادة تفعيل الإقامة.', 'error');
+            // For reactivation, a chambreId (the original room) is essential.
+            // For discharge, chambreId is also essential to make the room available.
+            if ((action === 'reactivate' || action === 'discharge') && !chambreId) {
+                // For reactivation, we want to pick an empty room automatically
+                if (action === 'reactivate') {
+                    if (!serviceId) {
+                        showMessage('خطأ: رقم القسم (service) غير متوفر لإعادة التفعيل.', 'error');
+                        return;
                     }
-                } catch (error) {
-                    console.error('Error reactivating stay:', error);
-                    showMessage(error.response?.data?.message || 'حدث خطأ أثناء إعادة تفعيل الإقامة.', 'error');
+                    try {
+                        const roomsResponse = await axios.get('/room', { params: { id_service: serviceId } });
+                        const rooms = roomsResponse.data;
+                        if (!Array.isArray(rooms) || rooms.length === 0) {
+                            showMessage('لا توجد غرف متاحة لإعادة التفعيل', 'error');
+                            return;
+                        }
+                        chambreId = rooms[0].id_chambre;
+                    } catch (error) {
+                        showMessage('حدث خطأ أثناء جلب الغرف المتاحة', 'error');
+                        return;
+                    }
+                } else {
+                    showMessage('خطأ: رقم الغرفة الأصلي مطلوب لهذا الإجراء.', 'error');
+                    console.error('Missing chambreId for discharge:', { sejourId, action, chambreId });
+                    return;
                 }
             }
-        }
 
-        async function endStay(sejourId) {
-            if (!sejourId) {
-                showMessage('لم يتم تحديد الإقامة بشكل صحيح.', 'error');
-                return;
-            }
-            if (confirm('هل أنت متأكد أنك تريد إنهاء هذه الإقامة؟')) {
-                try {
-                    const response = await axios.put('/sejour/status', {
-                        id_sejour: sejourId,
-                        Date_sortie: new Date().toISOString().split('T')[0] // Sets current date as exit date
-                    });
-                    if (response.status === 200) {
-                        showMessage('تم إنهاء الإقامة بنجاح.', 'success');
-                        loadManagePatients();
-                    } else {
-                        showMessage(response.data.message || 'فشل في إنهاء الإقامة.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error ending stay:', error);
-                    showMessage(error.response?.data?.message || 'حدث خطأ أثناء إنهاء الإقامة.', 'error');
+            try {
+                const requestBody = {
+                    id_sejour: sejourId,
+                    action: action,
+                    id_chambre: chambreId // This is patient.room_id from getAllPatientsForAdmin or the new empty room
+                };
+
+                if (action === 'discharge') {
+                    requestBody.Date_sortie = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('en-GB');
                 }
+
+                const response = await axios.put('/sejour/status', requestBody);
+
+                if (response.status === 200) {
+                    await loadManagePatients(); 
+                    const successMessage = action === 'discharge' ? 'تم إنهاء إقامة المريض بنجاح' : 'تمت إعادة تفعيل إقامة المريض بنجاح';
+                    showMessage(successMessage, 'success');
+                } else {
+                    const errorMessage = response.data?.message || (action === 'discharge' ? 'فشل في تحديث حالة المريض' : 'فشل في إعادة تفعيل إقامة المريض');
+                    throw new Error(errorMessage);
+                }
+            } catch (error) {
+                console.error('Error toggling patient stay status:', error);
+                const displayMessage = error.response?.data?.message || error.message || 'حدث خطأ أثناء تغيير حالة المريض';
+                showMessage(displayMessage, 'error');
             }
         }
 

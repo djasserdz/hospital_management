@@ -45,7 +45,7 @@ if ($method === 'GET') {
 
             $nurse->id_user = $_GET['nurse_id'];
             error_log("Calling nurse->getAllPatients() for nurse_id: " . $nurse->id_user); // DEBUG
-            $result = $nurse->getAllPatients();
+            $result = $nurse->getAllPatients($_GET['nurse_id']);
             error_log("Result from getAllPatients(): " . print_r($result, true)); // DEBUG
 
             if ($result !== false) { // An empty array is a valid result (no patients)

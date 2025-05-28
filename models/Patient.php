@@ -89,21 +89,56 @@ class Patient {
     }
 
     public function readOne() {
-        $sql = "
-            SELECT *
-            FROM " . $this->table . " 
-            JOIN Sejour ON Sejour.id_patient = Patients.id_patient
-            JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
-            JOIN Services ON Services.id_service = Chambres.id_service
-            WHERE Patients.id_patient = :id
-            LIMIT 1
-        ";
+        // Query to get patient details and their LATEST sejour information
+        $sql = "SELECT 
+                    p.*, 
+                    s.id_sejour, s.Date_entree, s.Date_sortiee, s.id_chambre,
+                    ch.numero_cr as room_number,
+                    srv.nom_service as service_name, srv.id_service as service_id_for_room
+                FROM " . $this->table . " p
+                LEFT JOIN Sejour s ON p.id_patient = s.id_patient
+                LEFT JOIN (
+                    SELECT id_patient, MAX(id_sejour) as max_sejour_id
+                    FROM Sejour
+                    WHERE id_patient = :id
+                    GROUP BY id_patient
+                ) latest_s ON p.id_patient = latest_s.id_patient AND s.id_sejour = latest_s.max_sejour_id
+                LEFT JOIN Chambres ch ON s.id_chambre = ch.id_chambre
+                LEFT JOIN Services srv ON ch.id_service = srv.id_service
+                WHERE p.id_patient = :id
+                LIMIT 1"; // LIMIT 1 is okay here as we are fetching one patient based on p.id_patient
     
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $this->id_patient);
-        $stmt->execute();
-    
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->bindParam(':id', $this->id_patient, PDO::PARAM_INT);
+        
+        if ($stmt->execute()) {
+            $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($patient_data) {
+                // Convert birth_date to YYYY-MM-DD if it's stored as DATETIME or other format
+                if (isset($patient_data['birth_date']) && $patient_data['birth_date']) {
+                     try {
+                        $birth_date_obj = new DateTime($patient_data['birth_date']);
+                        $patient_data['birth_date'] = $birth_date_obj->format('Y-m-d');
+                    } catch (Exception $e) {
+                        // Log error or handle, for now, leave as is if conversion fails
+                        error_log("Error converting birth_date in readOne: " . $e->getMessage());
+                    }
+                }
+                // Convert Date_entree similarly if needed by the frontend for the update modal
+                if (isset($patient_data['Date_entree']) && $patient_data['Date_entree']) {
+                     try {
+                        $date_entree_obj = new DateTime($patient_data['Date_entree']);
+                        $patient_data['Date_entree'] = $date_entree_obj->format('Y-m-d');
+                    } catch (Exception $e) {
+                        error_log("Error converting Date_entree in readOne: " . $e->getMessage());
+                    }
+                }
+            }
+            return $patient_data;
+        } else {
+            error_log("Error in Patient::readOne() execution: " . implode(", ", $stmt->errorInfo()));
+            return null; // Or handle error as appropriate
+        }
     }
 
     public function update($id_chambre = null, $admission_date = null) {
@@ -292,17 +327,24 @@ class Patient {
 
     public function getAllPatientsForAdmin() {
         // This query aims to get all patients and their latest sejour/room/service information if available.
-        // Patients without an active sejour or room will still be listed, but room/service details will be NULL.
         $query = "SELECT 
                     p.id_patient, p.full_name, p.NIN, p.age, p.sex, p.adress, p.telephone, p.groupage,
-                    s.id_sejour, s.Date_entree, s.Date_sortiee,
+                    ls.id_sejour, ls.Date_entree, ls.Date_sortiee,
                     ch.Numero_cr as room_number, ch.id_chambre as room_id,
                     srv.nom_service as service_name, srv.id_service as service_id
                   FROM " . $this->table . " p
-                  LEFT JOIN Sejour s ON p.id_patient = s.id_patient AND s.Date_sortiee IS NULL -- Link to current (active) sejour only
-                  LEFT JOIN Chambres ch ON s.id_chambre = ch.id_chambre
+                  LEFT JOIN (
+                      SELECT s_inner.*  -- Select all columns from the latest sejour
+                      FROM Sejour s_inner
+                      INNER JOIN (
+                          SELECT id_patient, MAX(id_sejour) AS max_sejour_id
+                          FROM Sejour
+                          GROUP BY id_patient
+                      ) latest_sejour_ids ON s_inner.id_patient = latest_sejour_ids.id_patient AND s_inner.id_sejour = latest_sejour_ids.max_sejour_id
+                  ) ls ON p.id_patient = ls.id_patient
+                  LEFT JOIN Chambres ch ON ls.id_chambre = ch.id_chambre
                   LEFT JOIN Services srv ON ch.id_service = srv.id_service
-                  ORDER BY p.id_patient ASC"; // Or any other preferred order
+                  ORDER BY p.id_patient ASC";
 
         try {
             $stmt = $this->conn->prepare($query);
