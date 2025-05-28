@@ -44,12 +44,22 @@ class Nurse {
                         CH.id_chambre AS sejour_id_chambre, 
                         CH.numero_cr as room_number, 
                         SRV.nom_service as service_name,
-                        P.full_name
+                        P.full_name,
+                        LatestSuivi.etat_santee as latest_etat_santee
                     FROM Patients P
                     JOIN Sejour S ON P.id_patient = S.id_patient
                     JOIN Chambres CH ON S.id_chambre = CH.id_chambre
                     JOIN Services SRV ON CH.id_service = SRV.id_service
-                    WHERE SRV.id_service = :id_service AND S.id_sejour IS NOT NULL
+                    LEFT JOIN (
+                        SELECT 
+                            sui.id_sejour, 
+                            sui.etat_santee,
+                            ROW_NUMBER() OVER (PARTITION BY sui.id_sejour ORDER BY sui.Date_observation DESC, sui.id_suivi DESC) as rn
+                        FROM Suivi sui
+                    ) AS LatestSuivi ON S.id_sejour = LatestSuivi.id_sejour AND LatestSuivi.rn = 1
+                    WHERE SRV.id_service = :id_service 
+                      AND S.Date_sortiee IS NULL 
+                      AND S.id_chambre IS NOT NULL 
                     ORDER BY S.Date_entree DESC";
 
         $stmt2 = $this->conn->prepare($query2);

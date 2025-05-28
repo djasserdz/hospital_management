@@ -264,7 +264,8 @@
                             <th>الغرفة</th>
                             <th>تاريخ الدخول</th>
                             <th>تاريخ الخروج</th>
-                            <th>التفاصيل</th>
+                            <th>تفاصيل</th>
+                            <th>اجراءات</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -596,6 +597,14 @@
         const newStayAvailableRoomsSelect = document.getElementById('newStayAvailableRooms');
         const createNewStayButton = document.getElementById('createNewStayButton');
 
+        const serviceNameToIdMap = {
+            "Cardiology": "1",
+            "Neurology": "2",
+            "Padiatrics": "3", // Verify this matches backend service_name. Correct if it's "Pediatrics"
+            "Orthopedics": "4"
+            // Add other service names and their corresponding IDs here if needed
+        };
+
         let searchTimeoutExistingPatient;
         let allPatientsCache = []; // Cache for patient search
 
@@ -701,17 +710,17 @@
 
                         if (isDischarged) {
                             statusText = `تم الخروج بتاريخ ${new Date(patient.Date_sortiee).toLocaleDateString()}`;
-                            // Pass patient.room_id which holds the original room of this sejour for reactivation
+                            // Pass patient.service_name for reactivation context
                             actionButtonHtml = `<button class="btn btn-success btn-sm" 
-                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'reactivate', ${patient.room_id || null}, ${patient.service_id_for_room || null})" 
-                                               title="تجديد الإقامة">
-                                            <i class="bi bi-arrow-clockwise"></i> تجديد الاقامة
+                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'reactivate', '${patient.service_name}')" 
+                                               title="إعادة تفعيل الإقامة">
+                                            <i class="bi bi-check-circle-fill"></i> تجديد الاقامة
                                         </button>`;
                         } else {
                             statusText = 'نشط';
                             // Pass patient.room_id for discharge, as it's the room to be vacated
                             actionButtonHtml = `<button class="btn btn-warning btn-sm" 
-                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'discharge', ${patient.room_id || null}, ${patient.service_id_for_room || null})" 
+                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'discharge', ${patient.room_id || null})" 
                                                title="إنهاء الإقامة">
                                             <i class="bi bi-calendar-x"></i> إنهاء الإقامة
                                         </button>`;
@@ -727,17 +736,20 @@
                             <td>${patient.Date_entree ? new Date(patient.Date_entree).toLocaleDateString() : '-'}</td>
                             <td>${statusText}</td>
                             <td>
-                                ${actionButtonHtml}
                                 <button class="btn btn-info btn-sm" 
                                         onclick="showPatientDetails(${patient.id_patient})" 
+                                        data-bs-toggle="modal" data-bs-target="#detailsPatientModal"
                                         title="عرض التفاصيل">
                                     <i class="bi bi-eye"></i>
                                 </button>
+                            </td>
+                            <td>
                                 <button class="btn btn-primary btn-sm" 
                                         onclick="openUpdatePatientModal(${patient.id_patient}, ${patient.id_sejour || null}, '${patient.full_name}', '${patient.NIN}', ${patient.age}, '${patient.sex}', '${patient.adress || ''}', '${patient.telephone || ''}', '${patient.groupage || ''}', ${patient.room_id || null}, '${patient.room_number || ''}')" 
                                         title="تحديث بيانات المريض">
                                     <i class="bi bi-pencil"></i>
                                 </button>
+                                ${actionButtonHtml}
                             </td>
                         `;
                     });
@@ -989,7 +1001,7 @@
         addButton.addEventListener('click', addPatient);
         updateButton.addEventListener('click', saveUpdatedPatient);
         if (createNewStayButton) {
-            createNewStayButton.addEventListener('click', createNewStay);
+            createNewStayButton.addEventListener("click", createNewStay);
         }
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -1031,51 +1043,70 @@
             loadManagePatients();
         });
 
-        async function toggleAgentStayStatus(sejourId, action, chambreId, serviceId) {
+        async function toggleAgentStayStatus(sejourId, action, contextValue = null) {
             if (!sejourId || !action) {
-                showMessage('خطأ في تحديد الإقامة أو الإجراء', 'error');
-                console.error('Missing parameters for toggleAgentStayStatus:', { sejourId, action, chambreId, serviceId });
+                let missingParam = !sejourId ? 'الإقامة' : 'الإجراء';
+                showMessage(`خطأ في تحديد ${missingParam}`, 'error');
+                console.error('Missing parameters for toggleAgentStayStatus:', { sejourId, action });
                 return;
             }
-            // For reactivation, a chambreId (the original room) is essential.
-            // For discharge, chambreId is also essential to make the room available.
-            if ((action === 'reactivate' || action === 'discharge') && !chambreId) {
-                // For reactivation, we want to pick an empty room automatically
-                if (action === 'reactivate') {
-                    if (!serviceId) {
-                        showMessage('خطأ: رقم القسم (service) غير متوفر لإعادة التفعيل.', 'error');
+
+            const requestBody = {
+                id_sejour: sejourId,
+                action: action,
+            };
+
+            if (action === 'discharge') {
+                const chambreIdToDischarge = contextValue;
+                if (!chambreIdToDischarge) {
+                    showMessage('خطأ: رقم الغرفة مطلوب لإنهاء الإقامة.', 'error');
+                    console.error('Missing chambreId for discharge:', { sejourId, action, chambreIdToDischarge });
+                    return;
+                }
+                requestBody.id_chambre = chambreIdToDischarge;
+                requestBody.Date_sortie = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('en-GB');
+            } else if (action === 'reactivate') {
+                const serviceNameForReactivation = contextValue;
+                if (!serviceNameForReactivation) {
+                    showMessage('خطأ: اسم القسم مطلوب لإعادة تفعيل الإقامة.', 'error');
+                    console.error('Missing serviceName for reactivation:', { sejourId, action });
+                    return;
+                }
+
+                const serviceId = serviceNameToIdMap[serviceNameForReactivation];
+                if (!serviceId) {
+                    showMessage(`خطأ: لا يمكن العثور على معرّف للقسم '${serviceNameForReactivation}'. الرجاء مراجعة إعدادات الخريطة الداخلية للخدمات.`, 'error');
+                    console.error(`No ID mapping for service name: ${serviceNameForReactivation}. Current map:`, serviceNameToIdMap);
+                    return;
+                }
+
+                try {
+                    console.log(`Fetching rooms for service: ${serviceNameForReactivation} (ID: ${serviceId})`);
+                    const roomResponse = await axios.get(`/room`, { params: { id_service: serviceId } });
+                    const roomsForService = roomResponse.data;
+
+                    if (roomsForService && roomsForService.length > 0) {
+                        // Assuming the first room returned is available or suitable for assignment.
+                        // If rooms have an explicit availability status, filter by that status here.
+                        requestBody.id_chambre = roomsForService[0].id_chambre;
+                        console.log(`Selected room ${requestBody.id_chambre} for sejour ${sejourId} in service ${serviceNameForReactivation}`);
+                    } else {
+                        showMessage(`لا توجد غرف متاحة حالياً في قسم '${serviceNameForReactivation}' لإعادة التفعيل.`, 'error');
+                        console.warn(`No rooms found for service ID ${serviceId} (${serviceNameForReactivation})`);
                         return;
                     }
-                    try {
-                        const roomsResponse = await axios.get('/room', { params: { id_service: serviceId } });
-                        const rooms = roomsResponse.data;
-                        if (!Array.isArray(rooms) || rooms.length === 0) {
-                            showMessage('لا توجد غرف متاحة لإعادة التفعيل', 'error');
-                            return;
-                        }
-                        chambreId = rooms[0].id_chambre;
-                    } catch (error) {
-                        showMessage('حدث خطأ أثناء جلب الغرف المتاحة', 'error');
-                        return;
-                    }
-                } else {
-                    showMessage('خطأ: رقم الغرفة الأصلي مطلوب لهذا الإجراء.', 'error');
-                    console.error('Missing chambreId for discharge:', { sejourId, action, chambreId });
+                } catch (error) {
+                    console.error(`Error fetching rooms for service ID ${serviceId} (${serviceNameForReactivation}):`, error);
+                    showMessage('حدث خطأ أثناء محاولة إيجاد غرفة متاحة لإعادة التفعيل.', 'error');
                     return;
                 }
             }
+            // The original comment about id_chambre not being sent for reactivate
+            // has been effectively replaced by the logic above.
+
+            console.log("Request Body to /sejour/status:", requestBody);
 
             try {
-                const requestBody = {
-                    id_sejour: sejourId,
-                    action: action,
-                    id_chambre: chambreId // This is patient.room_id from getAllPatientsForAdmin or the new empty room
-                };
-
-                if (action === 'discharge') {
-                    requestBody.Date_sortie = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('en-GB');
-                }
-
                 const response = await axios.put('/sejour/status', requestBody);
 
                 if (response.status === 200) {

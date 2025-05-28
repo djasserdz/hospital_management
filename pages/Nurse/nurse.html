@@ -964,7 +964,7 @@ function displayPatients(table, patientsList, isManageSection) {
         if (dischargeDate) {
             statusText = `تم الخروج بتاريخ ${new Date(dischargeDate).toLocaleDateString()}`;
             actionButtonHtml = `<button class="btn btn-success btn-sm"
-                                       onclick="updatePatientStayStatus(${sejourId}, 'reactivate', ${sejourChambreId})">
+                                       onclick="updatePatientStayStatus(${sejourId}, 'reactivate')"> 
                                    إعادة التفعيل
                                </button>`;
         } else {
@@ -987,10 +987,6 @@ function displayPatients(table, patientsList, isManageSection) {
             // Add discharge button for active patients (no dischargeDate)
             if (!dischargeDate) {
                 actionButtons += `
-                    <button class="btn btn-warning btn-sm ms-2"
-                            onclick="updatePatientStayStatus(${sejourId}, 'discharge', ${sejourChambreId})">
-                        إنهاء الإقامة
-                    </button>
                 `;
             }
             row.innerHTML = `
@@ -999,7 +995,7 @@ function displayPatients(table, patientsList, isManageSection) {
                     ${roomNumberToDisplay}
                 </td>
                 <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
-                <td>${patient.etat_santee || '-'}</td>
+                <td>${patient.latest_etat_santee || '-'}</td>
                 <td class="notes-cell">
                     <i class="bi bi-eye notes-icon"
                        onclick="viewRecommendations(${sejourId})"
@@ -1185,8 +1181,8 @@ async function saveUpdatedPatient() {
 }
 
 
-async function updatePatientStayStatus(sejourId, action, chambreId) {
-    if (!sejourId || !action || (action === 'reactivate' && !chambreId)) {
+async function updatePatientStayStatus(sejourId, action, chambreId = null) {
+    if (!sejourId || !action) {
         let missingParam = !sejourId ? 'الإقامة' : (!action ? 'الإجراء' : 'الغرفة');
         showMessageAll(`خطأ في تحديد ${missingParam}`, 'error');
         console.error('Missing parameters for updatePatientStayStatus:', {sejourId, action, chambreId});
@@ -1194,33 +1190,21 @@ async function updatePatientStayStatus(sejourId, action, chambreId) {
     }
 
     try {
-        let finalChambreId = chambreId;
-        if (action === 'reactivate') {
-            // Fetch available rooms for the nurse
-            const nurse = JSON.parse(localStorage.getItem('loggedInUser'));
-            if (!nurse || !nurse.id) {
-                showMessageAll('خطأ في بيانات المستخدم', 'error');
-                return;
-            }
-            const roomsResponse = await axios.get('/nurse/room', { params: { nurse_id: nurse.id } });
-            const rooms = roomsResponse.data;
-            if (!Array.isArray(rooms) || rooms.length === 0) {
-                showMessageAll('لا توجد غرف متاحة لإعادة التفعيل', 'error');
-                return;
-            }
-            finalChambreId = rooms[0].id_chambre || rooms[0].room_id;
-        }
-
         const requestBody = {
             id_sejour: sejourId,
-            action: action,
-            id_chambre: finalChambreId
+            action: action
         };
 
-        // For discharge, we might want to send the current date as Date_sortie
         if (action === 'discharge') {
+            if (!chambreId) {
+                showMessageAll('خطأ: رقم الغرفة مطلوب لإنهاء الإقامة.', 'error');
+                console.error('Missing chambreId for discharge in updatePatientStayStatus:', { sejourId, action });
+                return;
+            }
+            requestBody.id_chambre = chambreId;
             requestBody.Date_sortie = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('en-GB');
-        }
+        } 
+        // For 'reactivate', id_chambre is no longer sent. The backend handles room assignment.
 
         const response = await axios.put('/sejour/status', requestBody);
 
