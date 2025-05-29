@@ -93,9 +93,16 @@ if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'room' && $request_met
                 echo json_encode(["message" => $discharge_result['error']]);
             }
         } elseif ($action === 'reactivate') {
-            // For reactivation, we no longer pass id_chambre from the frontend.
-            // The model will find an available room in the correct service.
-            $reactivate_result = $sejour->reactivateSejour($id_sejour);
+            // For reactivation, id_chambre (the chosen room) must be provided in the request body.
+            if (empty($data->id_chambre) || !filter_var($data->id_chambre, FILTER_VALIDATE_INT) || $data->id_chambre <= 0) {
+                http_response_code(400);
+                echo json_encode(["message" => "Missing or invalid required data: id_chambre is required for reactivation."]);
+                exit; 
+            }
+            $id_chambre_for_reactivation = $data->id_chambre;
+            
+            // id_sejour is already available from the initial check
+            $reactivate_result = $sejour->reactivateSejour($id_sejour, $id_chambre_for_reactivation);
 
             if ($reactivate_result['success']) {
                 http_response_code(200);
@@ -106,7 +113,8 @@ if ($uri[1] === 'sejour' && isset($uri[2]) && $uri[2] === 'room' && $request_met
             }
         } else {
             http_response_code(400);
-            echo json_encode(["message" => "Invalid action specified."]);
+            // Adjusted error message to reflect conditional requirement of id_chambre (now for both discharge and reactivate) and id_service (no longer for reactivate)
+            echo json_encode(["message" => "Missing required data. id_sejour and action are always required. id_chambre is required for discharge or reactivate."]);
         }
     } else {
         http_response_code(400);

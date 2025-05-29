@@ -957,6 +957,7 @@ function displayPatients(table, patientsList, isManageSection) {
         // The room ID associated with the sejour, needed for reactivation.
         // Ensure this is being sent from the backend in Nurse->getAllPatients()
         const sejourChambreId = patient.sejour_id_chambre || patient.room_id; 
+        const serviceIdForReactivation = patient.service_id || patient.id_service_for_reactivation; // Prefer a specific field if available
 
         let statusText;
         let actionButtonHtml;
@@ -964,7 +965,7 @@ function displayPatients(table, patientsList, isManageSection) {
         if (dischargeDate) {
             statusText = `تم الخروج بتاريخ ${new Date(dischargeDate).toLocaleDateString()}`;
             actionButtonHtml = `<button class="btn btn-success btn-sm"
-                                       onclick="updatePatientStayStatus(${sejourId}, 'reactivate')"> 
+                                       onclick="updatePatientStayStatus(${sejourId}, 'reactivate', null, ${serviceIdForReactivation || 'undefined'})"> 
                                    إعادة التفعيل
                                </button>`;
         } else {
@@ -1029,36 +1030,82 @@ function displayPatients(table, patientsList, isManageSection) {
 }
 
 // Modal Functions
-function openUpdateModal(patientId, sejourId) {
+async function openUpdateModal(patientId, sejourId) {
     selectedPatientId = patientId;
     selectedSejourId = sejourId;
-    
-    // Clear previous form data
+
     const form = document.getElementById('updatePatientForm');
     if (form) {
-        form.reset();
-    }
-    
-    // Reset prescriptions to default state
-    const prescriptionsContainer = document.getElementById('prescriptions');
-    if (prescriptionsContainer) {
-        prescriptionsContainer.innerHTML = `
-            <div class="input-group mb-2 prescription-item">
-                <input type="text" class="form-control" placeholder="الدواء" name="medicament[]">
-                <input type="text" class="form-control" placeholder="الجرعة" name="dosage[]">
-                <input type="text" class="form-control" placeholder="التردد" name="frequency[]">
-                <input type="text" class="form-control" placeholder="تعليمات" name="instruction[]">
-                <button type="button" class="btn btn-outline-danger" onclick="removePrescription(this)">حذف</button>
-            </div>
-        `;
+        form.reset(); // Reset form to clear previous entries
     }
 
-    // Set current date-time for observation
-    const dateObservation = document.getElementById('updateDateObservation');
-    if (dateObservation) {
+    const prescriptionsContainer = document.getElementById('prescriptions');
+    if (prescriptionsContainer) {
+        prescriptionsContainer.innerHTML = ''; // Clear existing prescription rows before populating
+    }
+
+    // Set current date-time for observation for the new Suivi entry
+    const dateObservationInput = document.getElementById('updateDateObservation');
+    if (dateObservationInput) {
         const now = new Date();
         const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-        dateObservation.value = localDateTime;
+        dateObservationInput.value = localDateTime;
+    }
+
+    if (!selectedSejourId) {
+        showMessage('لم يتم تحديد الإقامة لتحميل بياناتها.', 'error');
+        // Add a default empty prescription row if sejourId is missing, so the form is usable for a new patient scenario if ever adapted.
+        addPrescription();
+        return;
+    }
+
+    try {
+        const response = await axios.get('/sejour/modal-details', {
+            params: { id_sejour: selectedSejourId }
+        });
+        const modalData = response.data;
+
+        // Populate Prescriptions
+        if (modalData.prescriptions && modalData.prescriptions.length > 0) {
+            modalData.prescriptions.forEach(p => {
+                addPrescription(); // Add a new row
+                const newRow = prescriptionsContainer.lastElementChild; // Get the newly added row
+                if (newRow) {
+                    newRow.querySelector('input[name="medicament[]"]').value = p.Medicament || '';
+                    newRow.querySelector('input[name="dosage[]"]').value = p.Dosage || '';
+                    newRow.querySelector('input[name="frequency[]"]').value = p.frequence || ''; // Ensure correct key from backend
+                    newRow.querySelector('input[name="instruction[]"]').value = p.instructions || ''; // Ensure correct key
+                }
+            });
+        } else {
+            addPrescription(); // Add at least one empty row if no prescriptions exist
+        }
+
+        // Populate Suivi Data from latest_suivi if available
+        if (modalData.latest_suivi) {
+            const latestSuivi = modalData.latest_suivi;
+            document.getElementById('updateStatus').value = latestSuivi.etat_santee || '';
+            document.getElementById('updateTension').value = latestSuivi.tension || '';
+            document.getElementById('updateTemperature').value = latestSuivi.temperature || '';
+            document.getElementById('updateFrequenceCardiaque').value = latestSuivi.frequence_quardiaque || '';
+            document.getElementById('updateSaturationOxygene').value = latestSuivi.saturation_oxygene || '';
+            document.getElementById('updateGlycemie').value = latestSuivi.glycemie || '';
+            document.getElementById('updateRemarque').value = latestSuivi.Remarque || ''; // This will prefill the main Remarque
+            document.getElementById('updateWeight').value = latestSuivi.poids || '';
+            document.getElementById('updateHeight').value = latestSuivi.taille || '';
+            // updateDiagnosis and updateTreatmentMethod are general textareas, not directly from latest_suivi object.
+            // They will be part of the new Remarque or handled separately if needed.
+            // The dateObservationInput is already set to 'now' for the new Suivi record.
+        }
+        // If modalData.latest_suivi is null, the fields (except date) will remain blank from form.reset(), which is fine.
+
+    } catch (error) {
+        console.error('Error fetching details for update modal:', error);
+        showMessage('حدث خطأ أثناء تحميل بيانات التحديث.', 'error');
+        // Ensure at least one prescription row is available even if data load fails
+        if (prescriptionsContainer.children.length === 0) {
+            addPrescription();
+        }
     }
 }
 
@@ -1181,11 +1228,11 @@ async function saveUpdatedPatient() {
 }
 
 
-async function updatePatientStayStatus(sejourId, action, chambreId = null) {
+async function updatePatientStayStatus(sejourId, action, contextValue = null, serviceIdForReactivation = null) {
     if (!sejourId || !action) {
-        let missingParam = !sejourId ? 'الإقامة' : (!action ? 'الإجراء' : 'الغرفة');
+        let missingParam = !sejourId ? 'الإقامة' : 'الإجراء';
         showMessageAll(`خطأ في تحديد ${missingParam}`, 'error');
-        console.error('Missing parameters for updatePatientStayStatus:', {sejourId, action, chambreId});
+        console.error('Missing parameters for updatePatientStayStatus:', {sejourId, action, contextValue, serviceIdForReactivation});
         return;
     }
 
@@ -1196,6 +1243,7 @@ async function updatePatientStayStatus(sejourId, action, chambreId = null) {
         };
 
         if (action === 'discharge') {
+            const chambreId = contextValue;
             if (!chambreId) {
                 showMessageAll('خطأ: رقم الغرفة مطلوب لإنهاء الإقامة.', 'error');
                 console.error('Missing chambreId for discharge in updatePatientStayStatus:', { sejourId, action });
@@ -1203,8 +1251,15 @@ async function updatePatientStayStatus(sejourId, action, chambreId = null) {
             }
             requestBody.id_chambre = chambreId;
             requestBody.Date_sortie = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('en-GB');
+        } else if (action === 'reactivate') {
+            if (!serviceIdForReactivation) {
+                showMessageAll('خطأ: معرف القسم مطلوب لإعادة تفعيل الإقامة.', 'error');
+                console.error('Missing serviceIdForReactivation for reactivate in updatePatientStayStatus:', { sejourId, action });
+                return;
+            }
+            requestBody.id_service = serviceIdForReactivation;
+            // id_chambre is not sent for reactivate, backend handles room assignment within the provided service.
         } 
-        // For 'reactivate', id_chambre is no longer sent. The backend handles room assignment.
 
         const response = await axios.put('/sejour/status', requestBody);
 
@@ -1336,7 +1391,7 @@ async function viewPatientDetails(patientId) {
                     <p><strong>رقم التعريف:</strong> ${patient.NIN || '-'}</p>
                     <p><strong>رقم الهاتف:</strong> ${patient.telephone || patient.Tel || '-'}</p>
                     <p><strong>الجنس:</strong> ${patient.sex || patient.Gender || '-'}</p>
-                    <p><strong>العمر:</strong> ${patient.age || '-'}</p>
+                    <p><strong>تاريخ الميلاد:</strong> ${patient.birth_date || '-'}</p>
                     <p><strong>زمرة الدم:</strong> ${patient.groupage || patient.Blood_type || '-'}</p>
                     <p><strong>العنوان:</strong> ${patient.adress || patient.address || '-'}</p>
                 </div>
@@ -1399,18 +1454,22 @@ async function searchPatients(sectionId) {
                 }
             });
 
-            const patient = response.data;
+            const patients = response.data; // response.data is now an array of patients
 
-            // Ensure valid object is returned
-            if (!patient || typeof patient !== 'object' || Array.isArray(patient)) {
-                throw new Error('لم يتم العثور على المريض');
+            // Ensure valid array is returned
+            if (!Array.isArray(patients)) { // Check if it's an array
+                console.error('Search did not return an array:', patients); // Log for debugging
+                // Depending on desired behavior, you might want to show an error or an empty list
+                displayPatients(sectionId === 'manage-patients' ? managePatientsTable : allPatientsTable, [], sectionId === 'manage-patients');
+                throw new Error('لم يتم العثور على مرضى مطابقين أو حدث خطأ في البحث.'); // More specific error
             }
 
-            const patients = [patient]; // Wrap in array for compatibility
-
             if (sectionId === 'manage-patients') {
-                const activePatients = patients.filter(p => !p.Date_sortiee && !p.Date_sortie);
-                displayPatients(managePatientsTable, activePatients, true);
+                // For manage-patients, filter for active sejours if needed (current logic seems to do this in displayPatients)
+                // The backend searchPatient now returns patient details including sejour info for active ones.
+                // So direct display might be fine, or an additional client filter for only those *currently* in a room if the backend returns more.
+                // Assuming backend already filters correctly for active patients in nurse's service.
+                displayPatients(managePatientsTable, patients, true);
             } else {
                 displayPatients(allPatientsTable, patients, false);
             }

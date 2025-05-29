@@ -80,23 +80,57 @@ class Nurse {
     }
 
     
-    public function searchPatient($fullname) {
-        $query = "SELECT Patients.*, Chambres.Numero_cr, Services.nom_service 
-          FROM Patients 
-          JOIN Sejour ON Sejour.id_patient = Patients.id_patient
-          JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
-          JOIN Services ON Services.id_service = Chambres.id_service
-          WHERE Patients.full_name LIKE :fullname
-          LIMIT 1";
+    public function searchPatient($searchTerm, $id_nurse) {
+        // First, get the service ID for the nurse
+        $query_nurse_service = "SELECT id_service FROM Users WHERE id = :id_nurse AND role = 'nurse'";
+        $stmt_nurse_service = $this->conn->prepare($query_nurse_service);
+        $stmt_nurse_service->bindParam(':id_nurse', $id_nurse, PDO::PARAM_INT);
+        $stmt_nurse_service->execute();
+        $nurse_data = $stmt_nurse_service->fetch(PDO::FETCH_ASSOC);
 
-$stmt = $this->conn->prepare($query);
+        if (!$nurse_data || empty($nurse_data['id_service'])) {
+            error_log("Nurse not found or no service ID for nurse ID: " . $id_nurse . " in searchPatient");
+            return []; // Return empty array if nurse/service not found
+        }
+        $id_service = $nurse_data['id_service'];
 
-$fullname = '%' . $fullname . '%';
+        // Search patients within the nurse's service by full_name or NIN
+        $query = "SELECT P.*, 
+                        S.id_sejour, 
+                        S.Date_entree, 
+                        S.Date_sortiee,
+                        CH.id_chambre AS sejour_id_chambre, 
+                        CH.numero_cr as room_number, 
+                        SRV.nom_service as service_name,
+                        LatestSuivi.etat_santee as latest_etat_santee
+                  FROM Patients P
+                  LEFT JOIN Sejour S ON P.id_patient = S.id_patient AND S.Date_sortiee IS NULL AND S.id_chambre IS NOT NULL
+                  LEFT JOIN Chambres CH ON S.id_chambre = CH.id_chambre
+                  LEFT JOIN Services SRV ON CH.id_service = SRV.id_service
+                  LEFT JOIN (
+                        SELECT 
+                            sui.id_sejour, 
+                            sui.etat_santee,
+                            ROW_NUMBER() OVER (PARTITION BY sui.id_sejour ORDER BY sui.Date_observation DESC, sui.id_suivi DESC) as rn
+                        FROM Suivi sui
+                    ) AS LatestSuivi ON S.id_sejour = LatestSuivi.id_sejour AND LatestSuivi.rn = 1
+                  WHERE SRV.id_service = :id_service 
+                    AND (P.full_name LIKE :searchTerm OR P.NIN LIKE :searchTerm)";
 
-$stmt->bindParam(':fullname', $fullname, PDO::PARAM_STR);
-$stmt->execute();
+        $stmt = $this->conn->prepare($query);
 
-return $stmt->fetch(PDO::FETCH_ASSOC);
+        $searchTermParam = '%' . $searchTerm . '%';
+
+        $stmt->bindParam(':id_service', $id_service, PDO::PARAM_INT);
+        $stmt->bindParam(':searchTerm', $searchTermParam, PDO::PARAM_STR);
+        
+        if ($stmt->execute()) {
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $errorInfo = $stmt->errorInfo();
+            error_log("Error in searchPatient: " . implode(", ", $errorInfo) . " for nurse_id: " . $id_nurse . " and term: " . $searchTerm);
+            return []; // Return empty array on execution error
+        }
     }
     public function updateSuivi($data) {
     $query = "UPDATE Suivi SET 

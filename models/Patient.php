@@ -7,7 +7,7 @@ class Patient {
     public $id_patient;
     public $full_name;
     public $NIN;
-    public $age;
+    public $birth_date;
     public $sex;
     public $adress;  
     public $telephone;
@@ -23,13 +23,13 @@ class Patient {
             $this->conn->beginTransaction();
 
             $sql1 = "INSERT INTO " . $this->table . " 
-                    (full_name, NIN, age, sex, adress, telephone, groupage) 
-                    VALUES (:full_name, :NIN, :age, :sex, :adress, :telephone, :groupage)";
+                    (full_name, NIN, birth_date, sex, adress, telephone, groupage) 
+                    VALUES (:full_name, :NIN, :birth_date, :sex, :adress, :telephone, :groupage)";
             
             $stmt1 = $this->conn->prepare($sql1);
             $stmt1->bindParam(':full_name', $this->full_name);
             $stmt1->bindParam(':NIN', $this->NIN);
-            $stmt1->bindParam(':age', $this->age);
+            $stmt1->bindParam(':birth_date', $this->birth_date);
             $stmt1->bindParam(':sex', $this->sex);
             $stmt1->bindParam(':adress', $this->adress);
             $stmt1->bindParam(':telephone', $this->telephone);
@@ -114,16 +114,21 @@ class Patient {
         if ($stmt->execute()) {
             $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($patient_data) {
-                // Convert birth_date to YYYY-MM-DD if it's stored as DATETIME or other format
-                if (isset($patient_data['birth_date']) && $patient_data['birth_date']) {
+                // Convert birth_date to YYYY-MM-DD and calculate age
+                if (!empty($patient_data['birth_date'])) {
                      try {
-                        $birth_date_obj = new DateTime($patient_data['birth_date']);
-                        $patient_data['birth_date'] = $birth_date_obj->format('Y-m-d');
+                        $birthDateObj = new DateTime($patient_data['birth_date']);
+                        $patient_data['birth_date'] = $birthDateObj->format('Y-m-d');
+                        $today = new DateTime('today');
+                        $patient_data['age'] = $birthDateObj->diff($today)->y;
                     } catch (Exception $e) {
-                        // Log error or handle, for now, leave as is if conversion fails
-                        error_log("Error converting birth_date in readOne: " . $e->getMessage());
+                        error_log("Error processing birth_date in readOne: " . $e->getMessage());
+                        $patient_data['age'] = null;
                     }
+                } else {
+                    $patient_data['age'] = null;
                 }
+
                 // Convert Date_entree similarly if needed by the frontend for the update modal
                 if (isset($patient_data['Date_entree']) && $patient_data['Date_entree']) {
                      try {
@@ -146,14 +151,14 @@ class Patient {
             $this->conn->beginTransaction();
             
             $sql = "UPDATE " . $this->table . "
-                    SET full_name = :full_name, NIN = :NIN, age = :age, sex = :sex,
+                    SET full_name = :full_name, NIN = :NIN, birth_date = :birth_date, sex = :sex,
                         adress = :adress, telephone = :telephone, groupage = :groupage
                     WHERE id_patient = :id";
             
             $stmt = $this->conn->prepare($sql);
             $stmt->bindParam(':full_name', $this->full_name);
             $stmt->bindParam(':NIN', $this->NIN);
-            $stmt->bindParam(':age', $this->age);
+            $stmt->bindParam(':birth_date', $this->birth_date);
             $stmt->bindParam(':sex', $this->sex);
             $stmt->bindParam(':adress', $this->adress);
             $stmt->bindParam(':telephone', $this->telephone);
@@ -311,49 +316,84 @@ class Patient {
     public function getDetails() {
                $query = "SELECT 
                     Patients.*, 
-                    Suivi.*
+                    Suivi.*, 
+                    Sejour.Date_entree, Sejour.Date_sortiee, 
+                    Chambres.Numero_cr as room_number, 
+                    Services.nom_service as service_name
                   FROM Patients 
-                  JOIN Sejour ON Sejour.id_patient = Patients.id_patient 
-                  JOIN Suivi ON Suivi.id_sejour = Sejour.id_sejour
-                  WHERE Patients.id_patient = :id_patient";
+                  LEFT JOIN Sejour ON Sejour.id_patient = Patients.id_patient AND Sejour.Date_sortiee IS NULL -- latest active sejour
+                  LEFT JOIN Suivi ON Suivi.id_sejour = Sejour.id_sejour -- This will get all suivi, needs to be latest for single age display
+                  LEFT JOIN Chambres ON Chambres.id_chambre = Sejour.id_chambre
+                  LEFT JOIN Services ON Services.id_service = Chambres.id_service
+                  WHERE Patients.id_patient = :id_patient
+                  ORDER BY Suivi.Date_observation DESC LIMIT 1"; // Get the latest Suivi for this patient details view
     
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(":id_patient", $this->id_patient);
         $stmt->execute();
     
-        return $stmt->fetch(PDO::FETCH_ASSOC); // if expecting single result
-        // OR use fetchAll() if expecting multiple observations
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($data && !empty($data['birth_date'])) {
+            try {
+                $birthDateObj = new DateTime($data['birth_date']);
+                $data['birth_date'] = $birthDateObj->format('Y-m-d'); // Format for consistency
+                $today = new DateTime('today');
+                $data['age'] = $birthDateObj->diff($today)->y;
+            } catch (Exception $e) {
+                error_log("Error processing birth_date in getDetails: " . $e->getMessage());
+                $data['age'] = null;
+            }
+        } elseif ($data) {
+            $data['age'] = null;
+        }
+        return $data;
     }
 
     public function getAllPatientsForAdmin() {
-        // This query aims to get all patients and their latest sejour/room/service information if available.
-        $query = "SELECT 
-                    p.id_patient, p.full_name, p.NIN, p.age, p.sex, p.adress, p.telephone, p.groupage,
-                    ls.id_sejour, ls.Date_entree, ls.Date_sortiee,
-                    ch.Numero_cr as room_number, ch.id_chambre as room_id,
-                    srv.nom_service as service_name, srv.id_service as service_id
-                  FROM " . $this->table . " p
-                  LEFT JOIN (
-                      SELECT s_inner.*  -- Select all columns from the latest sejour
-                      FROM Sejour s_inner
-                      INNER JOIN (
-                          SELECT id_patient, MAX(id_sejour) AS max_sejour_id
-                          FROM Sejour
-                          GROUP BY id_patient
-                      ) latest_sejour_ids ON s_inner.id_patient = latest_sejour_ids.id_patient AND s_inner.id_sejour = latest_sejour_ids.max_sejour_id
-                  ) ls ON p.id_patient = ls.id_patient
-                  LEFT JOIN Chambres ch ON ls.id_chambre = ch.id_chambre
-                  LEFT JOIN Services srv ON ch.id_service = srv.id_service
-                  ORDER BY p.id_patient ASC";
+        // This query retrieves detailed information for each patient, including their current or last sejour,
+        // their room, and service. It handles cases where a patient might not have a sejour or a room.
+        $sql = "SELECT 
+                    P.id_patient, P.full_name, P.NIN, P.birth_date, P.sex, P.adress, P.telephone, P.groupage, 
+                    S.id_sejour, S.Date_entree, S.Date_sortiee, 
+                    CH.id_chambre as room_id, CH.Numero_cr as room_number, CH.Numero_lit as room_bed_number,
+                    SRV.id_service, SRV.nom_service as service_name
+                FROM Patients P
+                LEFT JOIN (
+                    -- Subquery to get the latest sejour for each patient
+                    SELECT s1.*, ROW_NUMBER() OVER(PARTITION BY s1.id_patient ORDER BY s1.Date_entree DESC, s1.id_sejour DESC) as rn
+                    FROM Sejour s1
+                ) S ON P.id_patient = S.id_patient AND S.rn = 1
+                LEFT JOIN Chambres CH ON S.id_chambre = CH.id_chambre
+                LEFT JOIN Services SRV ON CH.id_service = SRV.id_service
+                ORDER BY P.full_name ASC";
 
-        try {
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Error in Patient::getAllPatientsForAdmin(): " . $e->getMessage());
-            return []; // Return empty array on error
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        
+        $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $result = [];
+
+        // Calculate age for each patient if birth_date is available
+        foreach ($patients as $patient) {
+            $current_patient_id = $patient['id_patient'] ?? 'N/A'; // Get patient ID for logging
+            $problematic_birth_date = $patient['birth_date'] ?? 'NULL_VALUE'; // Get birth_date for logging
+
+            if (!empty($patient['birth_date'])) {
+                try {
+                    $birthDate = new DateTime($patient['birth_date']);
+                    $today = new DateTime('today');
+                    $patient['age'] = $birthDate->diff($today)->y; // Calculate and add age
+                } catch (Exception $e) {
+                    $patient['age'] = null; // Or some default/error indicator
+                    error_log("Error calculating age for patient ID {$current_patient_id} with birth_date '{$problematic_birth_date}': " . $e->getMessage());
+                }
+            } else {
+                $patient['age'] = null; // No birth date, no age
+            }
+            $result[] = $patient;
         }
+        return $result; // Ensure $result is always returned
     }
     
 }

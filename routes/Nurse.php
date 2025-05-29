@@ -26,8 +26,8 @@ if ($method === 'GET') {
            echo json_encode(["message"=>"missing ID nurse / search"]);
            exit;
         }
-        $nurse=new Nurse($db);
-        $result=$nurse->searchPatient($_GET['search']);
+        $nurse_model = new Nurse($db);
+        $result = $nurse_model->searchPatient($_GET['search'], $_GET['nurse_id']);
         http_response_code(200);
         echo json_encode($result);
         exit;

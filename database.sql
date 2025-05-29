@@ -36,7 +36,7 @@ CREATE TABLE Patients (
     id_patient INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(30) NOT NULL,
     NIN VARCHAR(15) not null,
-    age INT NOT NULL,
+    birth_date DATE NOT NULL,
     sex ENUM('homme','famme') not null,
     adress VARCHAR(100) NOT NULL,
     telephone CHAR(15),
@@ -108,16 +108,16 @@ INSERT INTO Users (id_service, full_name, email, password, role) VALUES
 (2, 'Bob Nurse', 'bob.n@hospital.com', '$2y$10$.rwWIJpSLbphSLGWBtiBU.qbdax2TwzHAUuF03DeqicX7mEJXcdTC', 'nurse'),
 (3, 'Claire Nurse', 'claire.n@hospital.com', 'hashed_password_3', 'nurse');
 
-INSERT INTO Patients (full_name,NIN, age,sex, adress, telephone,groupage) VALUES
-('John Doe','054845678', 45,'homme', '123 Main St, Cityville', '0612345678','AB+'),
-('Jane Smith','069874268', 30,'homme', '456 Elm St, Townsville', '0623456789','A+'),
-('Tom Hanks','023659874', 60,'homme', '789 Oak St, Villagetown', '0634567890','B+'),
+INSERT INTO Patients (full_name,NIN, birth_date,sex, adress, telephone,groupage) VALUES
+('John Doe','054845678', '1979-01-15','homme', '123 Main St, Cityville', '0612345678','AB+'),
+('Jane Smith','069874268', '1994-07-22','homme', '456 Elm St, Townsville', '0623456789','A+'),
+('Tom Hanks','023659874', '1964-03-10','homme', '789 Oak St, Villagetown', '0634567890','B+'),
 -- New Patients
-('Laura Palmer', '071234567', 17, 'famme', '1 Lynch Street, Twin Peaks', '0645678901', 'O-'),
-('Dale Cooper', '089876543', 35, 'homme', '1 Federal Plaza, Philadelphia', '0656789012', 'A-'),
+('Laura Palmer', '071234567', '2007-02-05', 'famme', '1 Lynch Street, Twin Peaks', '0645678901', 'O-'),
+('Dale Cooper', '089876543', '1989-11-12', 'homme', '1 Federal Plaza, Philadelphia', '0656789012', 'A-'),
 -- New Patients (IDs 6, 7)
-('Audrey Horne', '091112233', 18, 'famme', 'Great Northern Hotel, Twin Peaks', '0667890123', 'B-'),
-('Harry S. Truman', '102223344', 45, 'homme', 'Sheriff Station, Twin Peaks', '0678901234', 'O+');
+('Audrey Horne', '091112233', '2006-08-30', 'famme', 'Great Northern Hotel, Twin Peaks', '0667890123', 'B-'),
+('Harry S. Truman', '102223344', '1979-06-25', 'homme', 'Sheriff Station, Twin Peaks', '0678901234', 'O+');
 
 INSERT INTO Sejour (id_patient, id_chambre, Date_entree, Date_sortiee) VALUES
 (1, 1, '2025-05-01 08:00:00', NULL),

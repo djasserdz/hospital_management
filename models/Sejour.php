@@ -104,9 +104,9 @@ class Sejour {
         try { 
             $this->conn->beginTransaction();
 
-            // 1. Update Sejour with the discharge date
+            // 1. Update Sejour with the discharge date AND set id_chambre to NULL
             $query_update_sejour = "UPDATE " . $this->table_name . "
-                                    SET Date_sortiee = :date_sortie
+                                    SET Date_sortiee = :date_sortie, id_chambre = NULL
                                     WHERE id_sejour = :id_sejour";
             $stmt_update_sejour = $this->conn->prepare($query_update_sejour);
             $stmt_update_sejour->bindParam(':date_sortie', $date_sortie_sanitized);
@@ -115,8 +115,8 @@ class Sejour {
             if (!$stmt_update_sejour->execute()) {
                 $this->conn->rollBack();
                 $error_info = $stmt_update_sejour->errorInfo();
-                $detailed_error = "Échec de la mise à jour de la date de sortie du séjour: " . ($error_info[2] ?? "Erreur DB inconnue");
-                error_log("Failed to update sejour Date_sortiee. Sejour ID: " . $id_sejour . " Error: " . ($error_info[2] ?? "Unknown DB error"));
+                $detailed_error = "Échec de la mise à jour des informations de sortie du séjour: " . ($error_info[2] ?? "Erreur DB inconnue");
+                error_log("Failed to update sejour Date_sortiee and id_chambre. Sejour ID: " . $id_sejour . " Error: " . ($error_info[2] ?? "Unknown DB error"));
                 return ['success' => false, 'error' => $detailed_error];
             }
 
@@ -218,7 +218,18 @@ class Sejour {
             }
 
             // 2. Fetch the latest Suivi record (Remarque, Date_observation, nurse name)
-            $query_latest_suivi = "SELECT s.Remarque, s.Date_observation as last_suivi_date, u.full_name as last_suivi_by_nurse
+            $query_latest_suivi = "SELECT 
+                                       s.Remarque, 
+                                       s.Date_observation as last_suivi_date, 
+                                       s.etat_santee, 
+                                       s.tension, 
+                                       s.temperature, 
+                                       s.frequence_quardiaque, 
+                                       s.saturation_oxygene, 
+                                       s.glycemie,
+                                       s.poids, 
+                                       s.taille,
+                                       u.full_name as last_suivi_by_nurse
                                    FROM Suivi s
                                    JOIN Users u ON s.id_nurse = u.id
                                    WHERE s.id_sejour = :id_sejour
@@ -240,57 +251,40 @@ class Sejour {
         }
     }
 
-    public function reactivateSejour($id_sejour) {
+    public function reactivateSejour($id_sejour, $id_chambre_for_reactivation) {
         $this->conn->beginTransaction();
         try {
             $id_sejour = htmlspecialchars(strip_tags($id_sejour));
+            $id_chambre_selected = htmlspecialchars(strip_tags($id_chambre_for_reactivation));
 
-            // 1. Get the id_chambre from which the patient was discharged to determine the service
-            $query_get_discharged_chambre = "SELECT id_chambre FROM " . $this->table_name . " WHERE id_sejour = :id_sejour_for_service";
-            $stmt_get_discharged_chambre = $this->conn->prepare($query_get_discharged_chambre);
-            $stmt_get_discharged_chambre->bindParam(':id_sejour_for_service', $id_sejour, PDO::PARAM_INT);
-            $stmt_get_discharged_chambre->execute();
-            $sejour_info = $stmt_get_discharged_chambre->fetch(PDO::FETCH_ASSOC);
-
-            if (!$sejour_info || empty($sejour_info['id_chambre'])) {
+            if (empty($id_chambre_selected) || !filter_var($id_chambre_selected, FILTER_VALIDATE_INT) || $id_chambre_selected <= 0) {
                 $this->conn->rollBack();
-                error_log("reactivateSejour: Could not find original id_chambre for sejour ID: " . $id_sejour);
-                return ['success' => false, 'message' => 'لم يتم العثور على معلومات الغرفة الأصلية لهذه الإقامة لتحديد القسم.'];
+                error_log("reactivateSejour: Valid id_chambre_for_reactivation is required. Received: " . $id_chambre_selected . " for sejour ID: " . $id_sejour);
+                return ['success' => false, 'message' => 'معرف الغرفة المحدد صالح مطلوب لإعادة تفعيل الإقامة.'];
             }
-            $discharged_from_id_chambre = $sejour_info['id_chambre'];
 
-            // 2. Get the id_service from the discharged_from_id_chambre
-            $query_get_service = "SELECT id_service FROM Chambres WHERE id_chambre = :discharged_from_id_chambre";
-            $stmt_get_service = $this->conn->prepare($query_get_service);
-            $stmt_get_service->bindParam(':discharged_from_id_chambre', $discharged_from_id_chambre, PDO::PARAM_INT);
-            $stmt_get_service->execute();
-            $service_info = $stmt_get_service->fetch(PDO::FETCH_ASSOC);
+            // 1. Check if the selected room is available
+            $query_check_room = "SELECT Available FROM Chambres WHERE id_chambre = :id_chambre_selected FOR UPDATE"; // Lock the row
+            $stmt_check_room = $this->conn->prepare($query_check_room);
+            $stmt_check_room->bindParam(':id_chambre_selected', $id_chambre_selected, PDO::PARAM_INT);
+            $stmt_check_room->execute();
+            $room_status = $stmt_check_room->fetch(PDO::FETCH_ASSOC);
 
-            if (!$service_info || empty($service_info['id_service'])) {
+            if (!$room_status) {
                 $this->conn->rollBack();
-                error_log("reactivateSejour: Could not determine service for discharged chambre ID: " . $discharged_from_id_chambre);
-                return ['success' => false, 'message' => 'لم يتمكن من تحديد القسم بناءً على الغرفة التي خرج منها المريض.'];
+                error_log("reactivateSejour: Selected room ID " . $id_chambre_selected . " not found. Sejour ID: " . $id_sejour);
+                return ['success' => false, 'message' => 'الغرفة المختارة غير موجودة.'];
             }
-            $id_service_of_sejour = $service_info['id_service'];
-
-            // 3. Find an available room in that service
-            $query_find_available_room = "SELECT id_chambre FROM Chambres WHERE id_service = :id_service AND Available = TRUE ORDER BY numero_cr ASC, id_chambre ASC LIMIT 1";
-            $stmt_find_available_room = $this->conn->prepare($query_find_available_room);
-            $stmt_find_available_room->bindParam(':id_service', $id_service_of_sejour, PDO::PARAM_INT);
-            $stmt_find_available_room->execute();
-            $available_room = $stmt_find_available_room->fetch(PDO::FETCH_ASSOC);
-
-            if (!$available_room) {
+            if ($room_status['Available'] != 1 && $room_status['Available'] !== true) { // Check for both 1 and true
                 $this->conn->rollBack();
-                error_log("reactivateSejour: No available rooms in service ID: " . $id_service_of_sejour . " for sejour ID: " . $id_sejour);
-                return ['success' => false, 'message' => 'لا توجد غرف متاحة في هذا القسم حالياً.'];
+                error_log("reactivateSejour: Selected room ID " . $id_chambre_selected . " is not available. Sejour ID: " . $id_sejour);
+                return ['success' => false, 'message' => 'الغرفة المختارة ليست متاحة حالياً.'];
             }
-            $newly_assigned_id_chambre = $available_room['id_chambre'];
 
-            // 4. Reactivate sejour: set Date_sortiee to NULL and update id_chambre
+            // 2. Reactivate sejour: set Date_sortiee to NULL and update id_chambre
             $query_update_sejour = "UPDATE " . $this->table_name . " SET Date_sortiee = NULL, id_chambre = :new_id_chambre WHERE id_sejour = :id_sejour";
             $stmt_update_sejour = $this->conn->prepare($query_update_sejour);
-            $stmt_update_sejour->bindParam(':new_id_chambre', $newly_assigned_id_chambre, PDO::PARAM_INT);
+            $stmt_update_sejour->bindParam(':new_id_chambre', $id_chambre_selected, PDO::PARAM_INT);
             $stmt_update_sejour->bindParam(':id_sejour', $id_sejour, PDO::PARAM_INT);
 
             if (!$stmt_update_sejour->execute()) {
@@ -299,10 +293,10 @@ class Sejour {
                 return ['success' => false, 'message' => 'خطأ في إعادة تفعيل الإقامة (تحديث بيانات الإقامة).'];
             }
 
-            // 5. Make the chosen new room unavailable
-            $query_make_room_unavailable = "UPDATE Chambres SET Available = FALSE WHERE id_chambre = :newly_assigned_id_chambre";
+            // 3. Make the chosen new room unavailable
+            $query_make_room_unavailable = "UPDATE Chambres SET Available = FALSE WHERE id_chambre = :id_chambre_selected";
             $stmt_make_room_unavailable = $this->conn->prepare($query_make_room_unavailable);
-            $stmt_make_room_unavailable->bindParam(':newly_assigned_id_chambre', $newly_assigned_id_chambre, PDO::PARAM_INT);
+            $stmt_make_room_unavailable->bindParam(':id_chambre_selected', $id_chambre_selected, PDO::PARAM_INT);
 
             if (!$stmt_make_room_unavailable->execute()) {
                 $this->conn->rollBack();
@@ -311,7 +305,7 @@ class Sejour {
             }
 
             $this->conn->commit();
-            return ['success' => true, 'message' => 'تمت إعادة تفعيل الإقامة وتخصيص غرفة جديدة بنجاح.'];
+            return ['success' => true, 'message' => 'تمت إعادة تفعيل الإقامة وتخصيص الغرفة المحددة بنجاح.'];
         } catch (Exception $e) {
             $this->conn->rollBack();
             error_log("Exception in reactivateSejour: " . $e->getMessage());

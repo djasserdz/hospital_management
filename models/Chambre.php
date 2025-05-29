@@ -14,7 +14,7 @@ class Chambre {
         $this->conn = $db;
     }
     public function getAvailableByService() {
-        $sql = "SELECT id_chambre, numero_cr, numero_lit 
+        $sql = "SELECT id_chambre, numero_cr, numero_lit, available
                 FROM " . $this->table . " 
                 WHERE available = true AND id_service = :id_service";
 

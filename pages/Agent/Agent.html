@@ -253,6 +253,10 @@
                         <i class="bi bi-door-open-fill"></i> إقامة جديدة لمريض حالي
                     </button>
                 </div>
+                <!-- Search Input -->
+                <div class="mb-3">
+                    <input type="text" id="searchAgentPatientsInput" class="form-control" placeholder="ابحث بالاسم أو الرقم الوطني...">
+                </div>
                 <table id="managePatientsTable" class="table table-striped table-hover">
                     <thead>
                         <tr>
@@ -572,6 +576,43 @@
         </div>
     </div>
 
+    <!-- Reactivate Sejour Modal -->
+    <div class="modal fade" id="reactivateSejourModal" tabindex="-1" aria-labelledby="reactivateSejourModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reactivateSejourModalLabel">إعادة تفعيل إقامة المريض</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reactivateSejourForm" class="row g-3">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="reactivateServiceSelect">القسم</label>
+                                <select class="form-select" id="reactivateServiceSelect" name="id_service" required>
+                                    <option value="" selected disabled>جار تحميل الأقسام...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="reactivateRoomSelect">الغرفة</label>
+                                <select class="form-select" id="reactivateRoomSelect" name="id_chambre" required>
+                                    <option value="" selected disabled>اختر القسم أولاً...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-primary" id="confirmReactivationButton">إعادة تفعيل</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const managePatientsTable = document.getElementById('managePatientsTable').getElementsByTagName('tbody')[0];
@@ -607,6 +648,7 @@
 
         let searchTimeoutExistingPatient;
         let allPatientsCache = []; // Cache for patient search
+        let allAgentPatients = []; // To store the full list of patients for searching
 
         function showMessage(text, type) {
             patientMessage.innerHTML = `<i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}"></i> ${text}`;
@@ -689,80 +731,101 @@
             }
         }
 
+        function renderAgentPatientsTable(patientsToRender) {
+            const managePatientsTableBody = document.getElementById('managePatientsTable').getElementsByTagName('tbody')[0];
+            if (!managePatientsTableBody) {
+                console.error("Cannot find tbody in managePatientsTable");
+                return;
+            }
+            managePatientsTableBody.innerHTML = ''; // Clear existing rows
+
+            if (patientsToRender && patientsToRender.length > 0) {
+                patientsToRender.forEach(patient => {
+                    const row = managePatientsTableBody.insertRow();
+                    const isDischarged = patient.Date_sortiee;
+                    let statusText;
+                    let actionButtonHtml;
+
+                    if (isDischarged) {
+                        statusText = `تم الخروج بتاريخ ${new Date(patient.Date_sortiee).toLocaleDateString()}`;
+                        const serviceIdForReactivation = patient.service_id || patient.id_service; 
+                        actionButtonHtml = `<button class="btn btn-success btn-sm" 
+                                           onclick="toggleAgentStayStatus(${patient.id_sejour}, 'reactivate', ${serviceIdForReactivation || null})" 
+                                           title="إعادة تفعيل الإقامة">
+                                        <i class="bi bi-check-circle-fill"></i> تجديد الاقامة
+                                    </button>`;
+                    } else {
+                        statusText = 'نشط';
+                        actionButtonHtml = `<button class="btn btn-warning btn-sm" 
+                                           onclick="toggleAgentStayStatus(${patient.id_sejour}, 'discharge', ${patient.room_id || null})" 
+                                           title="إنهاء الإقامة">
+                                        <i class="bi bi-calendar-x"></i> إنهاء الإقامة
+                                    </button>`;
+                    }
+
+                    row.innerHTML = `
+                        <td>${patient.full_name || '-'}</td>
+                        <td>${patient.NIN || '-'}</td>
+                        <td>${patient.age || '-'}</td>
+                        <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
+                        <td>${patient.service_name || 'غير محدد'}</td> 
+                        <td>${patient.room_number || 'لا يوجد'}</td>
+                        <td>${patient.Date_entree ? new Date(patient.Date_entree).toLocaleDateString() : '-'}</td>
+                        <td>${statusText}</td>
+                        <td>
+                            <button class="btn btn-info btn-sm" 
+                                    onclick="showPatientDetails(${patient.id_patient})" 
+                                    data-bs-toggle="modal" data-bs-target="#detailsPatientModal"
+                                    title="عرض التفاصيل">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <button class="btn btn-warning btn-sm"
+                                onclick="openUpdatePatientModal(
+                                    ${patient.id_patient},
+                                    ${patient.id_sejour},
+                                    '${patient.full_name.replace(/'/g, "\\'")}',
+                                    '${patient.NIN}',
+                                    '${patient.sex}',
+                                    '${patient.adress ? patient.adress.replace(/'/g, "\\'") : ''}',
+                                    '${patient.telephone}',
+                                    '${patient.groupage}',
+                                    ${patient.id_chambre_sejour},
+                                    '${patient.room_number_sejour}'
+                                )">
+                                <i class="bi bi-pencil-square"></i> تعديل
+                            </button>
+                            ${actionButtonHtml}
+                        </td>
+                    `;
+                });
+            } else {
+                const row = managePatientsTableBody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 10; // Adjusted colspan
+                cell.textContent = 'لا يوجد مرضى يطابقون هذا البحث أو لا يوجد مرضى لعرضهم حالياً.';
+                cell.style.textAlign = 'center';
+            }
+        }
+
         async function loadManagePatients() {
             try {
                 const response = await axios.get("/admin/patients/all");
-                const patients = response.data;
-
-                const managePatientsTableBody = document.getElementById('managePatientsTable').getElementsByTagName('tbody')[0];
-                if (!managePatientsTableBody) {
-                    console.error("Cannot find tbody in managePatientsTable");
-                    return;
-                }
-                managePatientsTableBody.innerHTML = '';
-                
-                if (patients && patients.length > 0) {
-                    patients.forEach(patient => {
-                        const row = managePatientsTableBody.insertRow();
-                        const isDischarged = patient.Date_sortiee;
-                        let statusText;
-                        let actionButtonHtml;
-
-                        if (isDischarged) {
-                            statusText = `تم الخروج بتاريخ ${new Date(patient.Date_sortiee).toLocaleDateString()}`;
-                            // Pass patient.service_name for reactivation context
-                            actionButtonHtml = `<button class="btn btn-success btn-sm" 
-                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'reactivate', '${patient.service_name}')" 
-                                               title="إعادة تفعيل الإقامة">
-                                            <i class="bi bi-check-circle-fill"></i> تجديد الاقامة
-                                        </button>`;
-                        } else {
-                            statusText = 'نشط';
-                            // Pass patient.room_id for discharge, as it's the room to be vacated
-                            actionButtonHtml = `<button class="btn btn-warning btn-sm" 
-                                               onclick="toggleAgentStayStatus(${patient.id_sejour}, 'discharge', ${patient.room_id || null})" 
-                                               title="إنهاء الإقامة">
-                                            <i class="bi bi-calendar-x"></i> إنهاء الإقامة
-                                        </button>`;
-                        }
-
-                        row.innerHTML = `
-                            <td>${patient.full_name || '-'}</td>
-                            <td>${patient.NIN || '-'}</td>
-                            <td>${patient.age || '-'}</td>
-                            <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
-                            <td>${patient.service_name || 'غير محدد'}</td> 
-                            <td>${patient.room_number || 'لا يوجد'}</td>
-                            <td>${patient.Date_entree ? new Date(patient.Date_entree).toLocaleDateString() : '-'}</td>
-                            <td>${statusText}</td>
-                            <td>
-                                <button class="btn btn-info btn-sm" 
-                                        onclick="showPatientDetails(${patient.id_patient})" 
-                                        data-bs-toggle="modal" data-bs-target="#detailsPatientModal"
-                                        title="عرض التفاصيل">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </td>
-                            <td>
-                                <button class="btn btn-primary btn-sm" 
-                                        onclick="openUpdatePatientModal(${patient.id_patient}, ${patient.id_sejour || null}, '${patient.full_name}', '${patient.NIN}', ${patient.age}, '${patient.sex}', '${patient.adress || ''}', '${patient.telephone || ''}', '${patient.groupage || ''}', ${patient.room_id || null}, '${patient.room_number || ''}')" 
-                                        title="تحديث بيانات المريض">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                ${actionButtonHtml}
-                            </td>
-                        `;
-                    });
+                // Ensure response.data is an array before assigning it
+                if (Array.isArray(response.data)) {
+                    allAgentPatients = response.data; // Store the full list
                 } else {
-                    const row = managePatientsTableBody.insertRow();
-                    const cell = row.insertCell();
-                    cell.colSpan = 10;
-                    cell.textContent = 'لا يوجد مرضى لعرضهم حالياً.';
-                    cell.style.textAlign = 'center';
+                    // If data is not an array, log it and default to an empty array
+                    console.warn("API response for /admin/patients/all was not an array:", response.data);
+                    allAgentPatients = []; 
                 }
+                renderAgentPatientsTable(allAgentPatients); // Render the list
             } catch (error) {
-                console.error("Error loading patients for admin:", error);
+                console.error("Error loading patients for admin (catch block):", error); 
                 showMessage('حدث خطأ أثناء تحميل قائمة المرضى', 'error');
+                allAgentPatients = []; // Clear on error
+                renderAgentPatientsTable(allAgentPatients); // Render empty table
             }
         }
 
@@ -784,22 +847,10 @@
                     return;
                 }
 
-                const calculateAge = (birthDate) => {
-                    const today = new Date();
-                    const birth = new Date(birthDate);
-                    let age = today.getFullYear() - birth.getFullYear();
-                    const monthDiff = today.getMonth() - birth.getMonth();
-                    
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-                        age--;
-                    }
-                    return age;
-                };
-
                 const patientData = {
                     full_name: fullName,
                     NIN: NIN,
-                    age: calculateAge(birthDate),
+                    birth_date: birthDate,
                     sex: gender,
                     adress: address,
                     telephone: phoneNumber,
@@ -846,7 +897,7 @@
             }
         }
 
-        async function openUpdatePatientModal(id_patient, id_sejour, fullName, nin, age, sex, adress, telephone, groupage, room_id, room_number_unused) {
+        async function openUpdatePatientModal(id_patient, id_sejour, fullName, nin, sex, adress, telephone, groupage, room_id, room_number_unused) {
             selectedPatientId = id_patient;
             selectedSejourId = id_sejour; // This might be null if no active sejour, handle accordingly
 
@@ -909,24 +960,11 @@
                 const admissionDate = document.getElementById('updateAdmissionDate').value;
                 const roomId = document.getElementById('updateAvailableRooms').value;
 
-                const calculateAge = (birthDate) => {
-                    const today = new Date();
-                    const birth = new Date(birthDate);
-                    let age = today.getFullYear() - birth.getFullYear();
-                    const monthDiff = today.getMonth() - birth.getMonth();
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-                        age--;
-                    }
-                    return age;
-                };
-
-
-
                 const patientData = {
                     id_patient: selectedPatientId,
                     full_name: fullName,
                     NIN: NIN,
-                    age: calculateAge(birthDate),
+                    birth_date: birthDate,
                     sex: gender,
                     adress: address,
                     telephone: phoneNumber,
@@ -935,8 +973,8 @@
                     id_chambre: roomId,
                     id_service: department
                 };
-                if (!fullName || !gender || !address || !phoneNumber || !bloodType || !admissionDate || !roomId || !department) {
-                    showMessage('يرجى ملء جميع الحقول المطلوبة', 'error');
+                if (!fullName || !gender || !address || !phoneNumber || !bloodType || !birthDate) {
+                    showMessage('يرجى ملء جميع حقول بيانات المريض المطلوبة (بما في ذلك تاريخ الميلاد)', 'error');
                     return;
                 }
 
@@ -1040,6 +1078,20 @@
                 });
             }
 
+            // Search functionality for Agent Patients
+            const searchAgentPatientsInput = document.getElementById('searchAgentPatientsInput');
+            if (searchAgentPatientsInput) {
+                searchAgentPatientsInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    const filteredPatients = allAgentPatients.filter(patient => {
+                        const fullNameMatch = patient.full_name && patient.full_name.toLowerCase().includes(searchTerm);
+                        const ninMatch = patient.NIN && patient.NIN.toLowerCase().includes(searchTerm);
+                        return fullNameMatch || ninMatch;
+                    });
+                    renderAgentPatientsTable(filteredPatients);
+                });
+            }
+
             loadManagePatients();
         });
 
@@ -1047,7 +1099,7 @@
             if (!sejourId || !action) {
                 let missingParam = !sejourId ? 'الإقامة' : 'الإجراء';
                 showMessage(`خطأ في تحديد ${missingParam}`, 'error');
-                console.error('Missing parameters for toggleAgentStayStatus:', { sejourId, action });
+                console.error('Missing parameters for toggleAgentStayStatus:', { sejourId, action, contextValue });
                 return;
             }
 
@@ -1066,60 +1118,30 @@
                 requestBody.id_chambre = chambreIdToDischarge;
                 requestBody.Date_sortie = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('en-GB');
             } else if (action === 'reactivate') {
-                const serviceNameForReactivation = contextValue;
-                if (!serviceNameForReactivation) {
-                    showMessage('خطأ: اسم القسم مطلوب لإعادة تفعيل الإقامة.', 'error');
-                    console.error('Missing serviceName for reactivation:', { sejourId, action });
-                    return;
-                }
-
-                const serviceId = serviceNameToIdMap[serviceNameForReactivation];
-                if (!serviceId) {
-                    showMessage(`خطأ: لا يمكن العثور على معرّف للقسم '${serviceNameForReactivation}'. الرجاء مراجعة إعدادات الخريطة الداخلية للخدمات.`, 'error');
-                    console.error(`No ID mapping for service name: ${serviceNameForReactivation}. Current map:`, serviceNameToIdMap);
-                    return;
-                }
-
-                try {
-                    console.log(`Fetching rooms for service: ${serviceNameForReactivation} (ID: ${serviceId})`);
-                    const roomResponse = await axios.get(`/room`, { params: { id_service: serviceId } });
-                    const roomsForService = roomResponse.data;
-
-                    if (roomsForService && roomsForService.length > 0) {
-                        // Assuming the first room returned is available or suitable for assignment.
-                        // If rooms have an explicit availability status, filter by that status here.
-                        requestBody.id_chambre = roomsForService[0].id_chambre;
-                        console.log(`Selected room ${requestBody.id_chambre} for sejour ${sejourId} in service ${serviceNameForReactivation}`);
-                    } else {
-                        showMessage(`لا توجد غرف متاحة حالياً في قسم '${serviceNameForReactivation}' لإعادة التفعيل.`, 'error');
-                        console.warn(`No rooms found for service ID ${serviceId} (${serviceNameForReactivation})`);
-                        return;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching rooms for service ID ${serviceId} (${serviceNameForReactivation}):`, error);
-                    showMessage('حدث خطأ أثناء محاولة إيجاد غرفة متاحة لإعادة التفعيل.', 'error');
-                    return;
-                }
+                // For reactivate, we now open a modal to select service and room.
+                openReactivationModal(sejourId); // New function to open the modal
+                return; // Stop further execution in this function for reactivate action
             }
-            // The original comment about id_chambre not being sent for reactivate
-            // has been effectively replaced by the logic above.
+            // If action was not 'reactivate', it must be 'discharge' if it passed initial checks.
+            // So, the console.log and API call below are effectively for 'discharge'.
 
-            console.log("Request Body to /sejour/status:", requestBody);
+            console.log("Request Body to /sejour/status (for discharge):", requestBody);
 
             try {
-                const response = await axios.put('/sejour/status', requestBody);
+                const response = await axios.put('/sejour/status', requestBody); 
 
                 if (response.status === 200) {
                     await loadManagePatients(); 
-                    const successMessage = action === 'discharge' ? 'تم إنهاء إقامة المريض بنجاح' : 'تمت إعادة تفعيل إقامة المريض بنجاح';
+                    // Message is now specific to discharge as reactivate has its own path
+                    const successMessage = 'تم إنهاء إقامة المريض بنجاح'; 
                     showMessage(successMessage, 'success');
                 } else {
-                    const errorMessage = response.data?.message || (action === 'discharge' ? 'فشل في تحديث حالة المريض' : 'فشل في إعادة تفعيل إقامة المريض');
+                    const errorMessage = response.data?.message || 'فشل في إنهاء إقامة المريض';
                     throw new Error(errorMessage);
                 }
             } catch (error) {
-                console.error('Error toggling patient stay status:', error);
-                const displayMessage = error.response?.data?.message || error.message || 'حدث خطأ أثناء تغيير حالة المريض';
+                console.error('Error discharging patient stay status:', error);
+                const displayMessage = error.response?.data?.message || error.message || 'حدث خطأ أثناء إنهاء الإقامة';
                 showMessage(displayMessage, 'error');
             }
         }
@@ -1163,6 +1185,118 @@
                 showMessage(error.response?.data?.message || 'حدث خطأ أثناء إنشاء الإقامة الجديدة.', 'error');
             }
         }
+
+        const reactivateSejourModal = new bootstrap.Modal(document.getElementById('reactivateSejourModal'));
+        const reactivateServiceSelect = document.getElementById('reactivateServiceSelect');
+        const reactivateRoomSelect = document.getElementById('reactivateRoomSelect');
+        const confirmReactivationButton = document.getElementById('confirmReactivationButton');
+
+        let currentSejourIdForReactivation = null; // Variable to store sejourId
+
+        async function fetchServices() {
+            try {
+                // Attempt to use an existing endpoint if service data is already available, e.g., from department dropdowns
+                // This is a placeholder; replace with your actual service fetching logic or endpoint.
+                // const response = await axios.get('/services'); // Example endpoint
+                // For now, using the static map, assuming it's comprehensive enough.
+                // In a real app, an API call is better.
+                const services = Object.entries(serviceNameToIdMap).map(([name, id]) => ({ id_service: id, nom_service: name }));
+                return services;
+            } catch (error) {
+                console.error("Error fetching services:", error);
+                showMessage('حدث خطأ أثناء تحميل قائمة الأقسام', 'error');
+                return [];
+            }
+        }
+
+        async function openReactivationModal(sejourId) {
+            currentSejourIdForReactivation = sejourId; // Store sejourId
+            reactivateServiceSelect.innerHTML = '<option value="" selected disabled>جار تحميل الأقسام...</option>';
+            reactivateRoomSelect.innerHTML = '<option value="" selected disabled>اختر القسم أولاً...</option>';
+            reactivateRoomSelect.disabled = true;
+
+            const services = await fetchServices();
+            reactivateServiceSelect.innerHTML = '<option value="" selected disabled>اختر القسم...</option>'; // Reset after loading
+            if (services.length > 0) {
+                services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id_service;
+                    option.textContent = service.nom_service;
+                    reactivateServiceSelect.appendChild(option);
+                });
+            } else {
+                reactivateServiceSelect.innerHTML = '<option value="" selected disabled>لا توجد أقسام متاحة</option>';
+            }
+            reactivateSejourModal.show();
+        }
+
+        reactivateServiceSelect.addEventListener('change', async function() {
+            const serviceId = this.value;
+            reactivateRoomSelect.innerHTML = '<option value="" selected disabled>جار تحميل الغرف...</option>';
+            reactivateRoomSelect.disabled = true;
+
+            if (!serviceId) {
+                reactivateRoomSelect.innerHTML = '<option value="" selected disabled>اختر القسم أولاً...</option>';
+                return;
+            }
+
+            try {
+                const response = await axios.get('/room', { params: { id_service: serviceId } }); 
+                const rooms = response.data;
+
+                reactivateRoomSelect.innerHTML = '<option value="" selected disabled>اختر غرفة...</option>';
+                if (rooms.length > 0) {
+                    rooms.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.id_chambre;
+                        option.textContent = `غرفة ${room.numero_cr} (سرير ${room.Numero_lit || room.numero_lit || '-'})`;
+                        reactivateRoomSelect.appendChild(option);
+                    });
+                    reactivateRoomSelect.disabled = false;
+                } else {
+                    reactivateRoomSelect.innerHTML = '<option value="" selected disabled>لا توجد غرف متاحة في هذا القسم</option>';
+                }
+            } catch (error) {
+                console.error("Error fetching available rooms:", error);
+                showMessage('حدث خطأ أثناء تحميل الغرف المتاحة', 'error');
+                reactivateRoomSelect.innerHTML = '<option value="" selected disabled>خطأ في تحميل الغرف</option>';
+            }
+        });
+
+        async function submitReactivation() {
+            const id_sejour = currentSejourIdForReactivation; // Get sejourId from variable
+            const id_chambre = reactivateRoomSelect.value;
+
+            if (!id_sejour || !id_chambre) {
+                showMessage('يرجى اختيار القسم والغرفة لإعادة تفعيل الإقامة.', 'error');
+                return;
+            }
+
+            const requestBody = {
+                id_sejour: parseInt(id_sejour),
+                action: 'reactivate',
+                id_chambre: parseInt(id_chambre)
+            };
+
+            console.log("Submitting reactivation with:", requestBody);
+
+            try {
+                const response = await axios.put('/sejour/status', requestBody);
+                if (response.status === 200) {
+                    showMessage('تمت إعادة تفعيل إقامة المريض بنجاح واختيار غرفة جديدة.', 'success');
+                    reactivateSejourModal.hide();
+                    await loadManagePatients(); // Refresh the patient list
+                } else {
+                    throw new Error(response.data.message || 'فشل في إعادة تفعيل الإقامة.');
+                }
+            } catch (error) {
+                console.error("Error submitting reactivation:", error);
+                showMessage(error.response?.data?.message || error.message || 'حدث خطأ أثناء إعادة تفعيل الإقامة.', 'error');
+            }
+        }
+
+        confirmReactivationButton.addEventListener('click', submitReactivation);
+
     </script>
 </body>
 

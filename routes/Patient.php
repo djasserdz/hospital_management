@@ -73,7 +73,7 @@ if ($method === "GET") {
         }
         $patient=new Patient($db);
         $patient->full_name = $input['full_name'] ?? null;
-        $patient->age = $input['age'] ?? null;
+        $patient->birth_date = $input['birth_date'] ?? null;
         $patient->NIN=$input['NIN'] ?? null;
         $patient->sex = $input['sex'] ?? null;
         $patient->adress = $input['adress'] ?? null;
@@ -106,7 +106,7 @@ else if($method=="PUT"){
             $patient->id_patient = $input['id_patient'] ?? null;
             $patient->full_name = $input['full_name'] ?? null;
             $patient->NIN = $input['NIN'] ?? null;
-            $patient->age = $input['age'] ?? null;
+            $patient->birth_date = $input['birth_date'] ?? null;
             $patient->sex = $input['sex'] ?? null;
             $patient->adress = $input['adress'] ?? null;
             $patient->telephone = $input['telephone'] ?? null;
