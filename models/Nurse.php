@@ -43,6 +43,7 @@ class Nurse {
                         S.Date_sortiee,
                         CH.id_chambre AS sejour_id_chambre, 
                         CH.numero_cr as room_number, 
+                        CH.Numero_lit as room_bed_number,
                         SRV.nom_service as service_name,
                         P.full_name,
                         LatestSuivi.etat_santee as latest_etat_santee
@@ -101,6 +102,7 @@ class Nurse {
                         S.Date_sortiee,
                         CH.id_chambre AS sejour_id_chambre, 
                         CH.numero_cr as room_number, 
+                        CH.Numero_lit as room_bed_number,
                         SRV.nom_service as service_name,
                         LatestSuivi.etat_santee as latest_etat_santee
                   FROM Patients P

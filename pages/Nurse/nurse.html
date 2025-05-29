@@ -949,7 +949,16 @@ function displayPatients(table, patientsList, isManageSection) {
         const row = table.insertRow();
 
         const patientName = patient.full_name || '-';
-        const roomNumberToDisplay = patient.room_number || '-'; 
+        // Construct room display string
+        let roomDisplay = '';
+        if (patient.room_number) {
+            roomDisplay += patient.room_number;
+            if (patient.room_bed_number) {
+                roomDisplay += ` (سرير ${patient.room_bed_number})`;
+            }
+        } else {
+            roomDisplay = '-';
+        }
         const patientId = patient.id_patient;
         const sejourId = patient.id_sejour;
         const serviceNameToDisplay = patient.service_name || '-';
@@ -993,7 +1002,7 @@ function displayPatients(table, patientsList, isManageSection) {
             row.innerHTML = `
                 <td>${patientName}</td>
                 <td class="room-cell">
-                    ${roomNumberToDisplay}
+                    ${roomDisplay} 
                 </td>
                 <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
                 <td>${patient.latest_etat_santee || '-'}</td>
@@ -1019,7 +1028,7 @@ function displayPatients(table, patientsList, isManageSection) {
             row.innerHTML = `
                 <td>${patientName}</td>
                 <td>${patient.NIN || '-'}</td>
-                <td>${roomNumberToDisplay}</td>
+                <td>${roomDisplay}</td>
                 <td>${patient.sex === 'homme' ? 'ذكر' : (patient.sex === 'famme' ? 'أنثى' : '-')}</td>
                 <td>${serviceNameToDisplay}</td>
                 <td>${statusText}</td>
@@ -1403,7 +1412,7 @@ async function viewPatientDetails(patientId) {
                     <p><strong>نسبة الأكسجين:</strong> ${patient.saturation_oxygene || patient.oxygen_saturation ? (patient.saturation_oxygene || patient.oxygen_saturation) + '%' : '-'}</p>
                     <p><strong>مستوى الجلوكوز:</strong> ${patient.glycemie || patient.glucose_level ? (patient.glycemie || patient.glucose_level) + ' mg/dL' : '-'}</p>
                     <p><strong>الوزن:</strong> ${patient.poids || patient.weight ? (patient.poids || patient.weight) + ' كجم' : '-'}</p>
-                    <p><strong>الطول:</strong> ${patient.taille || patient.height ? (patient.taille || patient.height) + ' سم' : '-'}</p>
+                    <p><strong>الطول:</strong> ${patient.taille || patient.height ? (patient.taille || patient.height) + ' متر' : '-'}</p>
                 </div>
             </div>
         `;
