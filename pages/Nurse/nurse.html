@@ -485,18 +485,6 @@
 <button class="btn btn-outline-primary mt-2" onclick="addRecommendation('addRecommendations')" type="button">إضافة دواء</button>
 </div>
 </div>
-<div class="col-md-12">
-<div class="form-group">
-<label for="addDiagnosis">التشخيص</label>
-<textarea class="form-control" id="addDiagnosis" name="diagnosis" placeholder="أدخل التشخيص هنا" required="" rows="3"></textarea>
-</div>
-</div>
-<div class="col-md-12">
-<div class="form-group">
-<label for="addTreatmentMethod">طريقة العلاج</label>
-<textarea class="form-control" id="addTreatmentMethod" name="treatment_method" placeholder="أدخل طريقة العلاج هنا" required="" rows="3"></textarea>
-</div>
-</div>
 <!-- البيانات الحيوية -->
 <div class="col-md-6">
 <div class="form-group">
@@ -582,16 +570,6 @@
 </div>
 </div>
 <button class="btn btn-outline-primary mt-2" onclick="addPrescription()" type="button">إضافة دواء</button>
-</div>
-<!-- Diagnosis -->
-<div class="col-md-12">
-<label for="updateDiagnosis">التشخيص</label>
-<textarea class="form-control" id="updateDiagnosis" name="diagnosis" placeholder="أدخل التشخيص هنا" required="" rows="3"></textarea>
-</div>
-<!-- Treatment Method -->
-<div class="col-md-12">
-<label for="updateTreatmentMethod">طريقة العلاج</label>
-<textarea class="form-control" id="updateTreatmentMethod" name="treatment_method" placeholder="أدخل طريقة العلاج هنا" required="" rows="3"></textarea>
 </div>
 <!-- Suivi / Vital Signs -->
 <div class="col-md-6">
@@ -1145,8 +1123,6 @@ async function saveUpdatedPatient() {
 
         // Collect form data
         const status = document.getElementById('updateStatus')?.value;
-        const diagnosis = document.getElementById('updateDiagnosis')?.value?.trim();
-        const treatmentMethod = document.getElementById('updateTreatmentMethod')?.value?.trim();
         const tension = document.getElementById('updateTension')?.value?.trim();
         const temperature = parseFloat(document.getElementById('updateTemperature')?.value) || null;
         const frequenceCardiaque = parseInt(document.getElementById('updateFrequenceCardiaque')?.value) || null;
@@ -1161,26 +1137,36 @@ async function saveUpdatedPatient() {
             throw new Error('يرجى تحديد حالة المريض');
         }
 
-        // Update prescriptions
-        if (prescriptions.length > 0) {
-            try {
-                // Delete existing prescriptions for this stay (if your API requires individual deletes)
-                const existingPrescriptionsResponse = await axios.delete('/prescription', {
-                    params: { id: selectedSejourId }
-                });
-                console.log('Deleted existing prescriptions:', existingPrescriptionsResponse);
+        // Update prescriptions: Delete all existing for the sejour, then add new ones.
+        try {
+            // 1. Fetch existing prescriptions for this sejour
+            const existingPrescriptionsResponse = await axios.get('/prescriptions', {
+                params: { id_sejour: selectedSejourId }
+            });
+            const existingPrescriptions = existingPrescriptionsResponse.data.prescriptions; // Assuming the backend wraps it in a 'prescriptions' key
 
-                if (existingPrescriptionsResponse.status === 200 && existingPrescriptionsResponse.data.prescriptions) {
-                    const existingPrescriptions = existingPrescriptionsResponse.data.prescriptions;
-                    
-                    for (const prescription of existingPrescriptions) {
-                        await axios.delete('/prescription', {
-                            params: { id: prescription.id_prescription }
+            if (existingPrescriptions && existingPrescriptions.length > 0) {
+                // 2. Delete each existing prescription by its id_prescription
+                for (const prescription of existingPrescriptions) {
+                    if (prescription.id_prescription) { // Ensure id_prescription exists
+                        await axios.delete('/prescription', { 
+                            params: { id: prescription.id_prescription } 
                         });
+                        console.log('Deleted existing prescription ID:', prescription.id_prescription);
+                    } else {
+                        console.warn('Found existing prescription without id_prescription:', prescription);
                     }
                 }
-
-                // Add new prescriptions
+            }
+        } catch (fetchDeleteError) {
+            console.error('Error fetching or deleting existing prescriptions:', fetchDeleteError);
+            // Decide if you want to stop or continue if deleting old prescriptions fails.
+            // For now, we'll log and continue to try adding the new ones.
+        }
+        
+        // 3. Add new prescriptions from the form
+        if (prescriptions.length > 0) {
+            try {
                 for (const prescription of prescriptions) {
                     const response = await axios.post('/prescription', {
                         id_sejour: selectedSejourId,
@@ -1189,11 +1175,11 @@ async function saveUpdatedPatient() {
                         frequence: prescription.frequency || '',
                         instructions: prescription.instruction || ''
                     });
-                    console.log('Added prescription:', response);
+                    console.log('Added new prescription:', response);
                 }
-            } catch (prescriptionError) {
-                console.error('Prescription update error:', prescriptionError);
-                // Continue with suivi creation even if prescription update fails
+            } catch (addPrescriptionError) {
+                console.error('New prescription adding error:', addPrescriptionError);
+                // Continue with suivi creation even if prescription update fails, but log error
             }
         }
 

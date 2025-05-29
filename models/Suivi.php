@@ -69,12 +69,16 @@ public function create($input) {
     $glycemie = isset($input['glycemie']) ? htmlspecialchars(strip_tags($input['glycemie'])) : null;
     $poids = isset($input['poids']) ? htmlspecialchars(strip_tags($input['poids'])) : null;
     
-    $taille_db_format = null;
+    $taille_db_format = "0.00"; // Default to "0.00"
     if (isset($input['taille'])) {
-        $taille_cm = floatval($input['taille']);
-        if ($taille_cm > 0) { // Ensure taille is positive before converting
-            $taille_m = $taille_cm / 100.0;
-            $taille_db_format = number_format($taille_m, 2, '.', '');
+        $taille_input = trim($input['taille']);
+        if (!empty($taille_input)) {
+            $taille_cm = floatval($taille_input);
+            if ($taille_cm > 0) { // Ensure taille is positive before converting
+                $taille_m = $taille_cm / 100.0;
+                $taille_db_format = number_format($taille_m, 2, '.', '');
+            }
+            // If $taille_cm is 0 or negative, it will remain "0.00" due to the default
         }
     }
 
@@ -102,7 +106,7 @@ public function create($input) {
     $stmt->bindParam(':saturation_oxygene', $saturation_oxygene, PDO::PARAM_INT);
     $stmt->bindParam(':glycemie', $glycemie); 
     $stmt->bindParam(':poids', $poids);
-    $stmt->bindParam(':taille', $taille_db_format); // This can be NULL if not provided or invalid
+    $stmt->bindParam(':taille', $taille_db_format, PDO::PARAM_STR);
     $stmt->bindParam(':Remarque', $Remarque);
     $stmt->bindParam(':Date_observation', $date_observation_db_format);
 

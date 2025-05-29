@@ -203,19 +203,23 @@ public function createSuivi($data) {
     // Sanitize and prepare data
     $id_sejour = htmlspecialchars(strip_tags($data['id_sejour']));
     $id_nurse = htmlspecialchars(strip_tags($data['id_nurse']));
-    $etat_santee = htmlspecialchars(strip_tags($data['etat_santee']));
-    $tension = htmlspecialchars(strip_tags($data['tension']));
-    $temperature = htmlspecialchars(strip_tags($data['temperature']));
-    $frequence_quardiaque = htmlspecialchars(strip_tags($data['frequence_quardiaque']));
-    $saturation_oxygene = htmlspecialchars(strip_tags($data['saturation_oxygene']));
-    $glycemie = htmlspecialchars(strip_tags($data['glycemie']));
-    $poids = htmlspecialchars(strip_tags($data['poids']));
-    // Assuming taille is sent in CM from frontend, convert to meters for DB (DECIMAL(4,2))
+    $etat_santee = !empty($data['etat_santee']) ? htmlspecialchars(strip_tags($data['etat_santee'])) : null;
+    $tension = !empty($data['tension']) ? htmlspecialchars(strip_tags($data['tension'])) : null;
+    $temperature = !empty($data['temperature']) ? htmlspecialchars(strip_tags($data['temperature'])) : null;
+    $frequence_quardiaque = !empty($data['frequence_quardiaque']) ? htmlspecialchars(strip_tags($data['frequence_quardiaque'])) : null;
+    $saturation_oxygene = !empty($data['saturation_oxygene']) ? htmlspecialchars(strip_tags($data['saturation_oxygene'])) : null;
+    $glycemie = !empty($data['glycemie']) ? htmlspecialchars(strip_tags($data['glycemie'])) : null;
+    $poids = !empty($data['poids']) ? htmlspecialchars(strip_tags($data['poids'])) : null;
+    
     $taille_cm = floatval($data['taille']);
-    $taille_m = $taille_cm / 100.0;
-    $taille_db_format = number_format($taille_m, 2, '.', '');
+    if ($taille_cm > 0) { // Only process if a positive height is given
+        $taille_m = $taille_cm / 100.0;
+        $taille_db_format = number_format($taille_m, 2, '.', '');
+    } else {
+        $taille_db_format = null;
+    }
 
-    $Remarque = htmlspecialchars(strip_tags($data['Remarque']));
+    $Remarque = !empty($data['Remarque']) ? htmlspecialchars(strip_tags($data['Remarque'])) : null;
     
     // Convert Date_observation from YYYY-MM-DDTHH:MM to YYYY-MM-DD HH:MM:SS
     $date_observation_input = $data['Date_observation'];
@@ -231,15 +235,15 @@ public function createSuivi($data) {
     // Bind params
     $stmt->bindParam(':id_sejour', $id_sejour);
     $stmt->bindParam(':id_nurse', $id_nurse);
-    $stmt->bindParam(':etat_santee', $etat_santee);
-    $stmt->bindParam(':tension', $tension);
-    $stmt->bindParam(':temperature', $temperature); // PDO will handle type based on column
-    $stmt->bindParam(':frequence_quardiaque', $frequence_quardiaque, PDO::PARAM_INT);
-    $stmt->bindParam(':saturation_oxygene', $saturation_oxygene, PDO::PARAM_INT);
-    $stmt->bindParam(':glycemie', $glycemie); // PDO will handle type based on column
-    $stmt->bindParam(':poids', $poids);
-    $stmt->bindParam(':taille', $taille_db_format);
-    $stmt->bindParam(':Remarque', $Remarque);
+    $stmt->bindParam(':etat_santee', $etat_santee, $etat_santee === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindParam(':tension', $tension, $tension === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindParam(':temperature', $temperature, $temperature === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindParam(':frequence_quardiaque', $frequence_quardiaque, $frequence_quardiaque === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+    $stmt->bindParam(':saturation_oxygene', $saturation_oxygene, $saturation_oxygene === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+    $stmt->bindParam(':glycemie', $glycemie, $glycemie === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindParam(':poids', $poids, $poids === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindParam(':taille', $taille_db_format, $taille_db_format === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindParam(':Remarque', $Remarque, $Remarque === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
     $stmt->bindParam(':Date_observation', $date_observation_db_format);
 
     if ($stmt->execute()) {
